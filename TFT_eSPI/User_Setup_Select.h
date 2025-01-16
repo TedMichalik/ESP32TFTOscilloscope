@@ -77,7 +77,7 @@
 //#include <User_Setups/Setup36_RPi_touch_ST7796.h>      // Setup file configured for ESP32 and RPi ST7796 TFT with touch
 
 //#include <User_Setups/Setup42_ILI9341_ESP32.h>           // Setup file for ESP32 and SPI ILI9341 240x320
-#include <User_Setups/Setup42a_ILI9341_ESP32.h>          // Setup file for ESP32 and SPI ILI9341 240x320
+//#include <User_Setups/Setup42a_ILI9341_ESP32.h>          // Setup file for ESP32 and SPI ILI9341 240x320
 //#include <User_Setups/Setup43_ST7735.h>            // Setup file for ESP8266 & ESP32 configured for my ST7735S 80x160
 //#include <User_Setups/Setup44_TTGO_CameraPlus.h>   // Setup file for ESP32 and TTGO T-CameraPlus ST7789 SPI bus TFT    240x240
 //#include <User_Setups/Setup45_TTGO_T_Watch.h>      // Setup file for ESP32 and TTGO T-Watch ST7789 SPI bus TFT  240x240
@@ -101,6 +101,7 @@
 
 //#include <User_Setups/Setup71_ESP32_S2_ST7789.h>       // Setup file for ESP32 S2 with ST7789
 //#include <User_Setups/Setup72_ESP32_ST7789_172x320.h>  // Setup file for ESP32 with ST7789 1.47" 172x320
+#include <User_Setups/Setup73_ideaspark_ESP32_1.9_inch_TFT.h>  // Setup file for ESP32 with ST7789 1.9" 170x320
 
 //#include <User_Setups/Setup100_RP2040_ILI9488_parallel.h> // Setup file for Pico/RP2040 with 8 bit parallel ILI9488
 //#include <User_Setups/Setup101_RP2040_ILI9481_parallel.h> // Setup file for Pico/RP2040 with 8 bit parallel ILI9481
