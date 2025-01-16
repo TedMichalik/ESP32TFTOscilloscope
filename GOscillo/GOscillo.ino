@@ -48,8 +48,8 @@ extern long ifreq;
 extern byte wave_id;
 
 const int LCD_WIDTH = 320;
-const int LCD_HEIGHT = 240;
-const int LCD_YMAX = 200;
+const int LCD_HEIGHT = 170;
+const int LCD_YMAX = 120;
 const int SAMPLES = 300;
 const int NSAMP = 1024;
 const int DISPLNG = 300;
