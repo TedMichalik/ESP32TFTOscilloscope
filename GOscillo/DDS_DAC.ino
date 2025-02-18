@@ -61,7 +61,6 @@ void pwm_dds_setup() {
     wp = (unsigned char *) wavetable[wave_id];
     memcpy((void*)wavebuf, wp, 256);
   }
-  timerAlarmEnable(timer);
 }
 
 void dds_close() {
@@ -114,16 +113,14 @@ void IRAM_ATTR onTimer() {
 // timer setup
 // 80000000/1000000*200 = 5.00 kHz clock
 void Setup_timer() {
-  timer = timerBegin(3, getApbFrequency()/1000000*200, true);
-  timerAttachInterrupt(timer, &onTimer, true);
-  timerAlarmWrite(timer, 1, true);
-  timerAlarmEnable(timer);
+  timer = timerBegin(getApbFrequency()/1000000*200);
+  timerAttachInterrupt(timer, &onTimer);
+  timerAlarm(timer, 1000000, true, 0);
 }
 
 void Close_timer() {
-  timerAlarmDisable(timer);
-//  timerEnd(timer);
-//  timer = NULL;
+  timerEnd(timer);
+  timer = NULL;
 }
 
 void update_ifrq(long diff) {

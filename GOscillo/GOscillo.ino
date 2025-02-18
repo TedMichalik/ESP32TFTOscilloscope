@@ -12,12 +12,20 @@
  * Copyright (c) 2009, Noriaki Mitsunaga
  */
 
+#include <WebServer.h>
 //#define NOLCD
+//#define NOTOUCH
 
 #ifndef NOLCD
+#ifndef NOTOUCH
 #include <SPI.h>
 #include "TFT_eSPI.h"
 TFT_eSPI display = TFT_eSPI();
+#else
+#include <Adafruit_ST7789.h> // Import the Adafruit_ST7789 library
+#include "User_Setup.h"
+Adafruit_ST7789 display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+#endif
 #endif
 
 #include "driver/adc.h"
