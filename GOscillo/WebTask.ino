@@ -9,12 +9,12 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 // WiFi information
 //#define WIFI_ACCESS_POINT
 #ifndef WIFI_ACCESS_POINT
-const char* ssid = "XXXX";
-const char* pass = "YYYY";
+const char* ssid = "TJM";
+const char* pass = "56221442";
 #else
 const char* apssid = "ESP32OSCILLO";
 const char* password = "12345678";
-const IPAddress ip(192, 168, 4, 1);
+const IPAddress ip(192, 168, 5, 4);
 const IPAddress subnet(255, 255, 255, 0);
 #endif
 
@@ -55,10 +55,12 @@ void handle_ch1_mode() {
     Serial.println(val);
     if (val == "chon") {
       ch0_mode = MODE_ON;       // CH1 ON
+      info_mode |= INFO_FRQ1;
     } else if (val == "chinv") {
       ch0_mode = MODE_INV;      // CH1 INV
     } else if (val == "choff") {
       ch0_mode = MODE_OFF;      // CH1 OFF
+      info_mode &= !INFO_FRQ1;
     }
     server.send(200, "text/html", "OK");  // response 200, send OK
   }
@@ -70,10 +72,12 @@ void handle_ch2_mode() {
     Serial.println(val);
     if (val == "chon") {
       ch1_mode = MODE_ON;       // CH2 ON
+      info_mode |= INFO_FRQ2;
     } else if (val == "chinv") {
       ch1_mode = MODE_INV;      // CH2 INV
     } else if (val == "choff") {
       ch1_mode = MODE_OFF;      // CH2 OFF
+      info_mode &= !INFO_FRQ2;
     }
     server.send(200, "text/html", "OK");  // response 200, send OK
   }
@@ -350,10 +354,10 @@ ws.onmessage = function(evt) {
   ctx.fillRect(0,0,groundW,groundH);
   var groundX0= 0; var groundY0= groundH;
   var pichX = 50;
-  var cnstH= groundH/4096;
+  var cnstH= groundH/%SCALEX%;
   var pichH = groundH/8;
   const fftsamples = 128;
-  const displng = 300;
+  const displng = %DISPLNG%;
   const dotpich = (groundW - 1) / displng;
   const fftpich = 512 / fftsamples;
   ctx.beginPath();
@@ -643,7 +647,7 @@ async function post_duty() {
 <body>
 <h3>ESP32 Web Oscilloscope ver. 1.33</h3>
 <div style='float: left; margin-right: 10px'>
-<canvas id='cvs1' width='601' height='401' class='float'></canvas></div>
+<canvas id='cvs1' width='%WIDTH%' height='%HEIGHT%' class='float'></canvas></div>
 <form id='rate0'>Rate: <label id="rate_area">%RATE% %REALDMA%</label>
   <button type="button" name='rate' value='1' onclick='postrate(this.value)'>FAST</button>
   <button type="button" name='rate' value='0' onclick='postrate(this.value)'>SLOW</button></form>
@@ -788,6 +792,11 @@ Hz</label>
     ch2acdc = "AC ";
   else
     ch2acdc = "DC ";
+
+  html.replace("%DISPLNG%", String(DISPLNG));
+  html.replace("%WIDTH%", String((SAMPLES * 50 / DOTS_DIV) + 1));
+  html.replace("%HEIGHT%", String((LCD_YMAX * 50 / DOTS_DIV) + 1));
+  html.replace("%SCALEX%", String(165 * DOTS_DIV));
 
   html.replace("%RATE%", Rates[rate]);
   html.replace("%REALDMA%", (rate > RATE_DMA)?"":((rate > RATE_MAG)?"DMA":"MAG"));

@@ -1,5 +1,3 @@
-#define GPIO_PIN 16 // should not assign GPIO #36 throough #39
-
 byte duty = 128;      // duty ratio = duty/256
 byte p_range = 16;    // bit_num 1 - 16
 unsigned short count;   // rate 256/256 - 1/256
@@ -12,8 +10,10 @@ void set_pulse_frq(float freq) {  // 4.768Hz <= freq <= 40MHz
   if (freq > 40e6) freq = 40e6;
   p_range = constrain(int(log(80e6/freq)/log(2)), 1, 16);
   count = round(256.0 / 80.0e6 * pow(2, p_range) * freq);
-  ledcAttach(GPIO_PIN, pulse_frq(), p_range);
-  setduty();
+//  ledcAttach(GPIO_PIN, pulse_frq(), p_range);
+//  setduty();
+  pulse_close();
+  pulse_init();
 }
 
 void pulse_init() {

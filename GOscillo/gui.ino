@@ -27,6 +27,7 @@
 #define SEL_DISPOFF 26
 
 #ifndef NOLCD
+#ifndef ST7789
 void CheckTouch() {
   uint16_t x = 0, y = 0; // To store the touch coordinates
   // Pressed will be set true is there is a valid touch on the screen
@@ -38,7 +39,7 @@ void CheckTouch() {
         ch0_mode = MODE_INV;
       } else if (ch0_mode == MODE_INV) {
         ch0_mode = MODE_OFF;
-        display.fillScreen(BGCOLOR);
+        display.display_rate(BGCOLOR);
       } else if (ch0_mode == MODE_OFF) {
         ch0_mode = MODE_ON;
         display.fillScreen(BGCOLOR);
@@ -141,6 +142,7 @@ void CheckTouch() {
   }
   saveTimer = 5000;     // set EEPROM save timer to 5 secnd
 }
+#endif
 #endif
 
 short adjust_offset(uint16_t x, short ch_off, byte range, int dcsw) {
@@ -333,7 +335,7 @@ void disp_sweep_rate() {
 
 void disp_trig_edge() {
   set_menu_color(SEL_EDGE);
-  display.print(trig_edge == TRIG_E_UP ? "/    " : "\\    "); // up or down arrow
+  display.print(trig_edge == TRIG_E_UP ? "/\\   " : "\\/   "); // up or down arrow
 }
 
 void disp_trig_source() {
@@ -349,42 +351,31 @@ void disp_trig_mode() {
 
 void TextBG(byte *y, int x, byte chrs) {
   int yinc, wid, hi;
-  if (info_mode & INFO_BIG) {
-    yinc = 20, wid = 12, hi = 16;
-  } else {
-    yinc = 10, wid = 6, hi = 8;
-  }
+  yinc = 10, wid = 6, hi = 8;
   display.fillRect(x, *y, wid * chrs - 1, hi, BGCOLOR);
   display.setCursor(x, *y);
   *y += yinc;
 }
-
-#define BOTTOM_LINE 224
 
 void DrawText_big() {
   char str[5];
   byte y;
 
   if (!(info_mode & INFO_OFF)) {
-    if (info_mode & INFO_BIG) {
-      display.setTextSize(2);
-      y = BOTTOM_LINE;
-    } else {
-      display.setTextSize(1);
-      y = BOTTOM_LINE + 7;
-    }
+    display.setTextSize(1);
+    y = BOTTOM_LINE;
   } else {
     return;
   }
   disp_ch0(1, 1);         // CH1
   display_ac_inv(1, CH0DCSW, ch0_mode);
-  display.setCursor(60, 1);   // CH1 range
+  display.setCursor(30, 1);   // CH1 range
   disp_ch0_range();
-  display.setCursor(132, 1);  // Rate
+  display.setCursor(60, 1);  // Rate
   disp_sweep_rate();
   if (fft_mode)
     return;
-  display.setCursor(192, 1);  // Position Offset
+  display.setCursor(100, 1);  // Position Offset
   if (item == SEL_OFST1) {
     set_menu_color(SEL_OFST1);
     display.print("POS1");
@@ -398,47 +389,47 @@ void DrawText_big() {
     display.setTextColor(OFFCOLOR, BGCOLOR);
     display.print("VPOS");
   }
-  display.setCursor(252, 1);  // Function
+  display.setCursor(140, 1);  // Function
   set_menu_color(SEL_FUNC);
   if (Start == false) {
     display.setTextColor(REDCOLOR, BGCOLOR);
-    display.print("HALT");
+    display.print("HOLD");
   } else {
-    display.print("FUNC");
+    display.print("RUN");
   }
 
   if (item >= SEL_DISP) {
 //    display.print("FREQ VOLT  LARG SMAL OFF  ");
     set_pos_menu(1, y, SEL_DISPFRQ);    // Frequency
     display.print("FREQ ");
-    set_pos_menu(60, y, SEL_DISPVOL);   // Voltage
+    set_pos_menu(40, y, SEL_DISPVOL);   // Voltage
     display.print("VOLT  ");
-    set_pos_menu(132, y, SEL_DISPLRG);  // Large
+    set_pos_menu(80, y, SEL_DISPLRG);  // Large
     display.print("LARG ");
-    set_pos_menu(192, y, SEL_DISPSML);  // Small
+    set_pos_menu(120, y, SEL_DISPSML);  // Small
     display.print("SMAL ");
-    set_pos_menu(252, y, SEL_DISPOFF);  // Off
+    set_pos_menu(160, y, SEL_DISPOFF);  // Off
     display.print("OFF  ");
   } else if (SEL_DDS <= item && item <= SEL_DDSFREQ) {
     set_pos_color(1, y, TXTCOLOR);     // DDS
     display.print("DDS  ");
-    set_pos_menu(60, y, SEL_DDS);       // ON/OFF
+    set_pos_menu(40, y, SEL_DDS);       // ON/OFF
     if (dds_mode == true) {
       display.print("ON   ");
     } else {
       display.print("OFF  ");
     }
     set_menu_color(SEL_DDSWAVE);
-    set_pos_menu(132, y, SEL_DDSWAVE);  // WAVE
+    set_pos_menu(80, y, SEL_DDSWAVE);  // WAVE
     disp_dds_wave();
     display.print(" ");
-    set_pos_menu(192, y, SEL_DDSFREQ);  // Frequency
+    set_pos_menu(120, y, SEL_DDSFREQ);  // Frequency
     disp_dds_freq();
     display.print("   ");
   } else if (SEL_PWM <= item && item <= SEL_PWMDUTY) {
     set_pos_color(1, y, TXTCOLOR); // PWM
     display.print("PWM  ");
-    set_pos_menu(60, y, SEL_PWM);       // ON/OFF
+    set_pos_menu(40, y, SEL_PWM);       // ON/OFF
     if (pulse_mode == true) {
       display.print("ON   ");
     } else {
@@ -462,13 +453,13 @@ void DrawText_big() {
   } else {
     disp_ch1(1, y);         // CH2
     display_ac_inv(y, CH1DCSW, ch1_mode);
-    display.setCursor(60, y);   // CH2 range
+    display.setCursor(30, y);   // CH2 range
     disp_ch1_range();
-    set_pos_color(132, y, TXTCOLOR); // Trigger souce
+    set_pos_color(60, y, TXTCOLOR); // Trigger souce
     disp_trig_source(); 
-    display.setCursor(192, y);  // Trigger edge
+    display.setCursor(100, y);  // Trigger edge
     disp_trig_edge();
-    display.setCursor(252, y);  // Trigger mode
+    display.setCursor(140, y);  // Trigger mode
     disp_trig_mode();
   }
 }
@@ -535,7 +526,9 @@ void CheckSW() {
   Millis = ms;
 
 #ifndef NOLCD
+#ifndef ST7789
   CheckTouch();
+#endif
 #endif
   if (wrate != 0) {
     updown_rate(wrate);

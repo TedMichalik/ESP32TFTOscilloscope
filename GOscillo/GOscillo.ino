@@ -13,17 +13,16 @@
  */
 
 #include <WebServer.h>
+#include "User_Setup.h"
 //#define NOLCD
-//#define NOTOUCH
 
 #ifndef NOLCD
-#ifndef NOTOUCH
+#ifndef ST7789
 #include <SPI.h>
 #include "TFT_eSPI.h"
 TFT_eSPI display = TFT_eSPI();
 #else
 #include <Adafruit_ST7789.h> // Import the Adafruit_ST7789 library
-#include "User_Setup.h"
 Adafruit_ST7789 display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 #endif
 #endif
@@ -55,18 +54,10 @@ extern unsigned short count;
 extern long ifreq;
 extern byte wave_id;
 
-const int LCD_WIDTH = 320;
-const int LCD_HEIGHT = 170;
-const int LCD_YMAX = 120;
-const int SAMPLES = 300;
-const int NSAMP = 1024;
-const int DISPLNG = 300;
-const int DOTS_DIV = 25;
-const int XOFF = 10;
-const int YOFF = 20;
 const int ad_ch0 = ADC1_CHANNEL_6;  // Analog 34 pin for channel 0 ADC1_CHANNEL_6
 const int ad_ch1 = ADC1_CHANNEL_7;  // Analog 35 pin for channel 1 ADC1_CHANNEL_7
-const long VREF[] = {83, 165, 413, 825, 1650}; // reference voltage 3.3V ->  82.5 :   1V/div range (40mV/dot)
+const long VREF[] = {50, 99, 248, 495, 990}; // reference voltage 3.3V ->  82.5 :   1V/div range (40mV/dot)
+//const long VREF[] = {83, 165, 413, 825, 1650}; // reference voltage 3.3V ->  82.5 :   1V/div range (40mV/dot)
                                         //                        -> 165 : 0.5V/div
                                         //                        -> 413 : 0.2V/div
                                         //                        -> 825 : 100mV/div
@@ -94,7 +85,9 @@ const int TRIG_E_DN = 1;
 #define RATE_MAG 1
 #define ITEM_MAX 28
 const char Rates[RATE_NUM][5] PROGMEM = {"10us", "20us", "100u", "200u", "500u", " 1ms", "1.3m", " 2ms", " 5ms", "10ms", "20ms", "50ms", "100m", "200m", "0.5s", " 1s ", " 2s ", " 5s ", " 10s"};
-const unsigned long HREF[] PROGMEM = {40, 40, 40, 80, 200, 400, 500, 800, 2000, 4000, 8000, 20000, 40000, 80000, 200000, 400000, 800000, 2000000, 4000000};
+const unsigned long US_DIV[] PROGMEM = {40, 40, 40, 80, 200, 1000, 1300, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000};
+const unsigned long HREF[] PROGMEM = {40, 40, 40, 80, 200, 400, 500, 1333, 3333, 6667, 13333, 33333, 40000, 80000, 200000, 400000, 800000, 2000000, 4000000};
+//const unsigned long HREF[] PROGMEM = {40, 40, 40, 80, 200, 400, 500, 800, 2000, 4000, 8000, 20000, 40000, 80000, 200000, 400000, 800000, 2000000, 4000000};
 #define RANGE_MIN 0
 #define RANGE_MAX 4
 #define VRF 3.3
@@ -123,7 +116,7 @@ volatile bool wfft, wdds;
 #define UPPIN     14  // UP
 #define DOWNPIN   27  // DOWN
 #define CH0DCSW   33  // DC/AC switch ch0
-#define CH1DCSW   32  // DC/AC switch ch1
+#define CH1DCSW   17  // DC/AC switch ch1
 //#define I2CSDA    21  // I2C SDA
 //#define I2CSCL    22  // I2C SCL
 // DAC_CHANNEL_1  is GPIO25
@@ -147,6 +140,7 @@ volatile bool wfft, wdds;
 #define REDCOLOR  TFT_RED
 #define LED_ON    HIGH
 #define LED_OFF   LOW
+// Bits in info_mode
 #define INFO_OFF  0x20
 #define INFO_BIG  0x10
 #define INFO_VOL2 0x08
@@ -169,10 +163,16 @@ void setup(){
 #ifdef NOLCD
   pinMode(LED_BUILTIN, OUTPUT);     // sets the digital pin as output
 #else
+#ifndef ST7789
   display.init();                    // initialise the library
+#else
+  display.init(LCD_WIDTH, LCD_HEIGHT);                    // initialise the library
+#endif
   display.setRotation(1);
   uint16_t calData[5] = { 368, 3538, 256, 3459, 7 };
+#ifndef ST7789
   display.setTouch(calData);
+#endif
   display.fillScreen(BGCOLOR);
 #endif
 
@@ -187,9 +187,7 @@ void setup(){
 //  set_default();
   wfft = fft_mode;
   wdds = dds_mode;
-//  DrawGrid();
-//  DrawText();
-//  display.display();
+
   adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11);
   adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_11);
   adc1_config_width(ADC_WIDTH_BIT_12);
@@ -209,13 +207,11 @@ void DrawGrid() {
   for (int x=0; x<=disp_leng; x += 5) { // Horizontal Line
     for (int y=0; y<=LCD_YMAX; y += DOTS_DIV) {
       display.drawPixel(XOFF+x, YOFF+y, GRIDCOLOR);
-//      CheckSW();
     }
   }
   for (int x=0; x<=disp_leng; x += DOTS_DIV ) { // Vertical Line
     for (int y=0; y<=LCD_YMAX; y += 5) {
       display.drawPixel(XOFF+x, YOFF+y, GRIDCOLOR);
-//      CheckSW();
     }
   }
 }
@@ -225,7 +221,6 @@ void DrawGrid() {
   display.drawFastVLine(XOFF+SAMPLES, YOFF, LCD_YMAX, FRMCOLOR);  // right vertical line
   display.drawFastHLine(XOFF, YOFF, SAMPLES, FRMCOLOR);           // top horizontal line
   display.drawFastHLine(XOFF, YOFF+LCD_YMAX, SAMPLES, FRMCOLOR);  // bottom horizontal line
-
   for (int y = 0; y < LCD_YMAX; y += DOTS_DIV) {
     if (y > 0){
       display.drawFastHLine(XOFF+1, YOFF+y, SAMPLES - 1, GRIDCOLOR);  // Draw 9 horizontal lines
@@ -250,11 +245,15 @@ void DrawText() {
 #ifndef NOLCD
   if (info_mode & INFO_OFF)
     return;
-  if (info_mode & INFO_BIG) {
-    display.setTextSize(2); // Big
-  } else {
-    display.setTextSize(1); // Small
-  }
+  display.setTextSize(1); // Small
+  display.setCursor(170, 1);
+  display.print("FRQ1");
+  display.setCursor(260, 1);
+  display.print("DTY1");
+  display.setCursor(170, BOTTOM_LINE);
+  display.print("FRQ2");
+  display.setCursor(260, BOTTOM_LINE);
+  display.print("DTY2");
 #endif
 
 //  if (info_mode && Start) {
@@ -351,7 +350,6 @@ void ClearAndDrawGraph() {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p5++, XOFF+x+1, YOFF+LCD_YMAX-*p6++, BGCOLOR);
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p7++, XOFF+x+1, YOFF+LCD_YMAX-*p8++, CH2COLOR);
     }
-//    CheckSW();
   }
 #endif
 }
@@ -532,10 +530,11 @@ void loop() {
       sample_i2s();
     } else if (rate == 6) { // channel 0 only 50us sampling
       sample_200us(50);
-    } else if (rate >= 7 && rate <= 8) {  // dual channel 100us, 200us sampling
-      sample_dual_us(HREF[rate] / 10);
+//    } else if (rate >= 7 && rate <= 8) {  // dual channel 100us, 200us sampling
+//      sample_dual_us(HREF[rate] / 10);
     } else {                // dual channel .5ms, 1ms, 2ms, 5ms, 10ms, 20ms sampling
-      sample_dual_ms(HREF[rate] / 10);
+      sample_dual_us(US_DIV[rate] / DOTS_DIV);
+//      sample_dual_ms(HREF[rate] / 10);
     }
 #ifdef NOLCD
     digitalWrite(LED_BUILTIN, LED_OFF); // GPIO2 is used for touch CS
@@ -635,25 +634,21 @@ void draw_screen() {
 //  display.display();
 }
 
-#define textINFO 214
 void measure_frequency(int ch) {
-  int x1, x2;
-  byte y;
+  int x;
+  byte y, yduty;
   freqDuty(ch);
 #ifndef NOLCD
-  if (info_mode & INFO_BIG) {
-    x1 = textINFO, x2 = x1+24;        // Big
-  } else {
-    x1 = textINFO + 48, x2 = x1+12;   // Small
-  }
   if (ch == 0) {
-    y = 22;
+    yduty = 1;
     display.setTextColor(CH1COLOR, BGCOLOR);
   } else {
-    y = 122;
+    yduty = YOFF + LCD_YMAX +10;
     display.setTextColor(CH2COLOR, BGCOLOR);
   }
-  TextBG(&y, x1, 8);
+  x = 200;
+  y = yduty;
+  TextBG(&y, x, 8);
   float freq = waveFreq[ch];
   if (freq < 999.5)
     display.print(freq);
@@ -665,7 +660,9 @@ void measure_frequency(int ch) {
   }
   display.print("Hz");
   if (fft_mode) return;
-  TextBG(&y, x2, 6);
+  x = 290;
+  y = yduty;
+  TextBG(&y, x, 6);
   display.print(waveDuty[ch], 1);  display.print('%');
 #endif
 }
@@ -678,11 +675,7 @@ void measure_voltage(int ch) {
   float vmax = VRF * dataMax[ch] / 4095.0;
   float vmin = VRF * dataMin[ch] / 4095.0;
 #ifndef NOLCD
-  if (info_mode & INFO_BIG) {
-    x = textINFO, y = 62;       // Big
-  } else {
-    x = textINFO + 48, y = 42;  // Small
-  }
+  x = MENU + 48, y = 42;  // Small
   if (ch == 0) {
     display.setTextColor(CH1COLOR, BGCOLOR);
   } else {
@@ -887,13 +880,13 @@ void set_default() {
   range1 = RANGE_MIN;
   ch1_mode = MODE_ON;
   ch1_off = 2048;
-  rate = 6;
+  rate = 7;
   trig_mode = TRIG_AUTO;
   trig_lv = 20;
   trig_edge = TRIG_E_UP;
   trig_ch = ad_ch0;
   fft_mode = false;
-  info_mode = 1;  // display frequency and duty.  Voltage display is off
+  info_mode = 3;  // display frequency and duty.  Voltage display is off
   item = 0;       // menu item
   pulse_mode = true;
   duty = 128;     // PWM 50%
