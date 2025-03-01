@@ -26,124 +26,6 @@
 #define SEL_DISPSML 25
 #define SEL_DISPOFF 26
 
-#ifndef NOLCD
-#ifndef ST7789
-void CheckTouch() {
-  uint16_t x = 0, y = 0; // To store the touch coordinates
-  // Pressed will be set true is there is a valid touch on the screen
-  bool pressed = display.getTouch(&x, &y);
-  if (!pressed) return;
-  if (y < 20) {
-    if (x < 60) {             // CH1 mode
-      if (ch0_mode == MODE_ON) {
-        ch0_mode = MODE_INV;
-      } else if (ch0_mode == MODE_INV) {
-        ch0_mode = MODE_OFF;
-        display.display_rate(BGCOLOR);
-      } else if (ch0_mode == MODE_OFF) {
-        ch0_mode = MODE_ON;
-        display.fillScreen(BGCOLOR);
-      }
-    } else if (x < 120) {     // CH1 voltage range
-      item = (item != SEL_RANGE1) ? SEL_RANGE1 : SEL_NONE;
-    } else if (x < 180) {     // Rate
-      item = (item != SEL_RATE) ? SEL_RATE : SEL_NONE;
-    } else if (x < 240) {     // Vertical position
-      if (item != SEL_OFST1 && item != SEL_OFST2)
-        item = SEL_OFST1;
-      else if (item == SEL_OFST1)
-        item = SEL_OFST2;
-      else
-        item = SEL_NONE;
-    } else if (x < 300) {     // Function
-      item = (item != SEL_FUNC) ? SEL_FUNC : SEL_NONE;
-    }
-    clear_bottom_text();    // clear bottom text area
-  } else if (y > 220) {
-    if (item < SEL_FUNC)
-      low_touch_base(x);
-    else
-      low_touch_func(x);
-  } else if ((y > 30 && y < 210) & (x < (LCD_WIDTH - 35))) {  // avoid conflict with trigger level
-    switch (item) {
-    case SEL_RATE:
-      if (x < (LCD_WIDTH / 2)) {  // minus
-        updown_rate(7);         // slow
-      } else {                    // plus
-        updown_rate(3);         // fast
-      }
-      break;
-    case SEL_RANGE1:
-      if (x < (LCD_WIDTH / 2)) {  // minus
-        updown_ch0range(7);
-      } else {                    // plus
-        updown_ch0range(3);
-      }
-      break;
-    case SEL_RANGE2:
-      if (x < (LCD_WIDTH / 2)) {  // minus
-        updown_ch1range(7);
-      } else {                    // plus
-        updown_ch1range(3);
-      }
-      break;
-    case SEL_TGLVL:
-      if (x > (LCD_WIDTH / 2)) {  // trigger level +
-        draw_trig_level(BGCOLOR); // erase old trig_lv mark
-        if (trig_lv < LCD_YMAX) {
-          trig_lv ++;
-          set_trigger_ad();
-        }
-      } else {                    // trigger level -
-        draw_trig_level(BGCOLOR); // erase old trig_lv mark
-        if (trig_lv > 0) {
-          trig_lv --;
-          set_trigger_ad();
-        }
-      }
-      break;
-    case SEL_OFST1:
-      ch0_off = adjust_offset(x, ch0_off, range0, CH0DCSW);
-      break;
-    case SEL_OFST2:
-      ch1_off = adjust_offset(x, ch1_off, range1, CH1DCSW);
-      break;
-    case SEL_DDSWAVE:
-      if (x < (LCD_WIDTH / 2)) {  // minus
-        rotate_wave(false);
-      } else {                    // plus
-        rotate_wave(true);
-      }
-      break;
-    case SEL_DDSFREQ:
-      update_ifrq(touch_diff(x));
-      break;
-    case SEL_NONE:
-      Start = !Start;           // halt
-      break;
-    case SEL_PWMFREQ:
-      update_frq(-touch_diff(x));
-      break;
-    case SEL_PWMDUTY:
-      duty = constrain((int)duty + touch_diff(x), 0, 255);
-      update_frq(0);
-      break;
-    default:                    // do nothing
-      if (fft_mode == true) {
-        wfft = false;
-      }
-      break;
-    }
-  }
-  if (x > XOFF+DISPLNG && y > YOFF && y <= YOFF+LCD_YMAX) { // trigger level
-    draw_trig_level(BGCOLOR); // erase old trig_lv mark
-    trig_lv = YOFF+LCD_YMAX - y;
-    set_trigger_ad();
-  }
-  saveTimer = 5000;     // set EEPROM save timer to 5 secnd
-}
-#endif
-#endif
 
 short adjust_offset(uint16_t x, short ch_off, byte range, int dcsw) {
   int val; 
@@ -166,122 +48,6 @@ short adjust_offset(uint16_t x, short ch_off, byte range, int dcsw) {
   return (constrain(val, -8191, 8191));
 }
 
-#ifndef NOLCD
-int touch_diff(uint16_t x) {
-  int diff;
-  if (x < (LCD_WIDTH / 8))          diff = -4;
-  else if (x < (LCD_WIDTH / 4))     diff = -3;
-  else if (x < ((3*LCD_WIDTH) / 8)) diff = -2;
-  else if (x < (LCD_WIDTH / 2))     diff = -1;
-  else if (x < ((5*LCD_WIDTH) / 8)) diff = 1;
-  else if (x < ((3*LCD_WIDTH) / 4)) diff = 2;
-  else if (x < ((7*LCD_WIDTH) / 8)) diff = 3;
-  else diff = 4;
-  return (diff);
-}
-
-void low_touch_base(uint16_t x) {
-  if (x < 60) {             // CH2 mode
-    if (rate < RATE_DUAL && ch0_mode != MODE_OFF) {
-      ch0_mode = MODE_OFF;
-      ch1_mode = MODE_ON;
-      display.fillScreen(BGCOLOR);
-    } else if (ch1_mode == MODE_ON) {
-      ch1_mode = MODE_INV;
-    } else if (ch1_mode == MODE_INV) {
-      ch1_mode = MODE_OFF;
-      display.fillScreen(BGCOLOR);
-    } else if (ch1_mode == MODE_OFF) {
-      ch1_mode = MODE_ON;
-    }
-  } else if (x < 120) {     // CH2 voltage range
-    item = (item != SEL_RANGE2) ? SEL_RANGE2 : SEL_NONE;
-  } else if (x < 180) {     // Trigger source
-    if (trig_ch == ad_ch0)
-      trig_ch = ad_ch1;
-    else
-      trig_ch = ad_ch0;
-    set_trigger_ad();
-  } else if (x < 240) {     // Trigger edge
-    if (trig_edge == TRIG_E_UP)
-      trig_edge = TRIG_E_DN;
-    else
-      trig_edge = TRIG_E_UP;
-  } else if (x < 300) {     // Trigger mode
-    if (trig_mode < TRIG_ONE)
-      trig_mode ++;
-    else
-      trig_mode = 0;
-    if (trig_mode != TRIG_ONE)
-      Start = true;
-  }
-}
-
-void low_touch_func(uint16_t x) {
-  if (item == SEL_FUNC) {
-    if (x < 60) {             // FFT
-      wfft = true;
-    } else if (x < 120) {     // PWM
-      item = SEL_PWM;
-      clear_bottom_text();                          // clear bottom text area
-    } else if (x < 180) {     // DDS
-      item = SEL_DDS;
-      clear_bottom_text();                          // clear bottom text area
-    } else if (x < 240) {     // DISP
-      item = SEL_DISP;
-      clear_bottom_text();                          // clear bottom text area
-    } else if (x < 300) {     // Frequency Counter
-    }
-  } else if (item >= SEL_PWM && item <= SEL_PWMDUTY) {
-    if (x < 60) {             // PWM
-    } else if (x < 120) {     // ON/OFF
-      if (pulse_mode == false) {  // turn on
-        update_frq(0);
-        pulse_start();
-        pulse_mode = true;
-      } else {                    // turn off
-        pulse_close();
-        pulse_mode = false;
-      }
-    } else if (x < 240) {     // Frequency
-      item = SEL_PWMFREQ;
-    } else if (x < 300) {     // Duty
-      item = SEL_PWMDUTY;
-    }
-  } else if (item >= SEL_DDS && item <= SEL_DDSFREQ) {
-    if (x < 60) {               // DDS
-    } else if (x < 120) {     // ON/OFF
-      if (dds_mode == false) {  // turn on
-        dds_setup();
-        dds_mode = wdds = true;
-      } else {                  // turn off
-        dds_close();
-        dds_mode = wdds = false;
-      }
-    } else if (x < 180) {     // WAVE
-      item = SEL_DDSWAVE;
-    } else if (x < 300) {     // Frequency
-      item = SEL_DDSFREQ;
-    }
-  } else if (item >= SEL_DISP && item <= SEL_DISPOFF) {
-    if (x < 60) {         // SEL_DISPFRQ
-      info_mode = (info_mode & 0x3c) | ((info_mode + 1) & 0x3);
-      clear_big_text();
-    } else if (x < 120) { // SEL_DISPVOL
-      info_mode = (info_mode & 0x33) | ((info_mode + 4) & 0xc);
-      clear_big_text();
-    } else if (x < 180) { // SEL_DISPLRG;
-      info_mode |= INFO_BIG;
-      clear_text();
-    } else if (x < 240) { // SEL_DISPSML;
-      info_mode &= ~INFO_BIG;
-      clear_text();
-    } else if (x < 300) { // SEL_DISPOFF;
-      info_mode ^= INFO_OFF;
-      clear_text();
-    }
-  }
-}
 
 void disp_ch0(int x, int y) {
   int color = (ch0_mode == MODE_OFF) ? OFFCOLOR : CH1COLOR;
@@ -503,7 +269,6 @@ void set_pos_menu(int x, int y, byte sel) {
     display.setTextColor(TXTCOLOR, BGCOLOR);
   }
 }
-#endif
 
 #define BTN_UP    0
 #define BTN_DOWN  10
@@ -525,29 +290,17 @@ void CheckSW() {
     return;
   Millis = ms;
 
-#ifndef NOLCD
-#ifndef ST7789
-  CheckTouch();
-#endif
-#endif
+//  CheckTouch();
   if (wrate != 0) {
     updown_rate(wrate);
     wrate = 0;
     saveTimer = 5000;     // set EEPROM save timer to 5 secnd
   }
 
-#ifndef NOLCD
-#ifdef BUTTON5DIR
-  if (digitalRead(DOWNPIN) == LOW && digitalRead(LEFTPIN) == LOW) {
-    sw = BTN_RESET; // both button press
-  } else if (digitalRead(UPPIN) == LOW && digitalRead(RIGHTPIN) == LOW) {
-    sw = BTN_FULL;  // both button press
-#else
   if (digitalRead(RIGHTPIN) == LOW && digitalRead(LEFTPIN) == LOW) {
     sw = BTN_RESET; // both button press
   } else if (digitalRead(UPPIN) == LOW && digitalRead(DOWNPIN) == LOW) {
     sw = BTN_FULL;  // both button press
-#endif
   } else if (digitalRead(DOWNPIN) == LOW) {
     sw = BTN_DOWN;  // down
   } else if (digitalRead(RIGHTPIN) == LOW) {
@@ -564,10 +317,9 @@ void CheckSW() {
     vtime = ms;
   saveTimer = 5000;     // set EEPROM save timer to 5 secnd
   menu_sw(sw); 
-  DrawText();
+//  DrawText();
 //  display.display();
   lastsw = sw;
-#endif
 }
 
 void updown_ch0range(byte sw) {
@@ -597,9 +349,7 @@ void updown_rate(byte sw) {
       rate --;
       rate_i2s_mode_config();
     }
-#ifndef NOLCD
     display.fillScreen(BGCOLOR);
-#endif
   } else if (sw == BTN_LEFT) {  // RATE SLOW
     orate = rate;
     if (rate < RATE_MAX) {
@@ -611,7 +361,6 @@ void updown_rate(byte sw) {
   }
 }
 
-#ifndef NOLCD
 void menu_sw(byte sw) {  
   int diff;
   switch (item) {
@@ -912,4 +661,3 @@ byte sw_accel(byte sw) {
   }
   return (diff);
 }
-#endif
