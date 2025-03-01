@@ -14,27 +14,12 @@
 
 #include <WebServer.h>
 #include "User_Setup.h"
-//#define NOLCD
-
-#ifndef NOLCD
-#ifndef ST7789
-#include <SPI.h>
-#include "TFT_eSPI.h"
-TFT_eSPI display = TFT_eSPI();
-#else
 #include <Adafruit_ST7789.h> // Import the Adafruit_ST7789 library
 Adafruit_ST7789 display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-#endif
-#endif
 
 #include "driver/adc.h"
-//#include "esp_task_wdt.h"
-
-//#define BUTTON5DIR
-#define EEPROM_START 0
-#ifdef EEPROM_START
 #include <EEPROM.h>
-#endif
+#define EEPROM_START 0
 #include "arduinoFFT.h"
 #define FFT_N 256
 double vReal[FFT_N]; // Real part array, actually float type
@@ -99,9 +84,11 @@ byte trig_mode = TRIG_AUTO, trig_lv = 10, trig_edge = TRIG_E_UP, trig_ch = ad_ch
 bool Start = true;  // Start sampling
 byte item = 0;      // Default item
 short ch0_off = 0, ch1_off = 400;
+bool ch0_active = false;
+bool ch1_active = false;
 byte data[4][SAMPLES];                  // keep twice of the number of channels to make it a double buffer
 uint16_t cap_buf[NSAMP], cap_buf1[NSAMP];
-uint16_t payload[SAMPLES*2+2];
+uint16_t payload[SAMPLES*2+8];
 byte odat00, odat01, odat10, odat11;    // old data buffer for erase
 byte sample=0;                          // index for double buffer
 bool fft_mode = false, pulse_mode = false, dds_mode = false, fcount_mode = false;
@@ -110,25 +97,13 @@ bool dac_cw_mode = false;
 int trigger_ad;
 volatile bool wfft, wdds;
 
-//#define LED_BUILTIN 2
 #define LEFTPIN   12  // LEFT
 #define RIGHTPIN  13  // RIGHT
 #define UPPIN     14  // UP
 #define DOWNPIN   27  // DOWN
 #define CH0DCSW   33  // DC/AC switch ch0
 #define CH1DCSW   17  // DC/AC switch ch1
-//#define I2CSDA    21  // I2C SDA
-//#define I2CSCL    22  // I2C SCL
-// DAC_CHANNEL_1  is GPIO25
-// DAC_CHANNEL_2  is GPIO26
-// ADC1_CHANNEL_0 is GPIO36
-// ADC1_CHANNEL_1 is GPIO37
-// ADC1_CHANNEL_2 is GPIO38
-// ADC1_CHANNEL_3 is GPIO39
-// ADC1_CHANNEL_4 is GPIO32
-// ADC1_CHANNEL_5 is GPIO33
-// ADC1_CHANNEL_6 is GPIO34
-// ADC1_CHANNEL_7 is GPIO35
+
 #define BGCOLOR   TFT_BLACK
 #define GRIDCOLOR TFT_DARKGREY
 #define CH1COLOR  TFT_GREEN
@@ -160,31 +135,15 @@ void setup(){
   pinMode(LEFTPIN, INPUT_PULLUP);   // left
   pinMode(34, ANALOG);              // Analog 34 pin for channel 0 ADC1_CHANNEL_6
   pinMode(35, ANALOG);              // Analog 35 pin for channel 1 ADC1_CHANNEL_7
-#ifdef NOLCD
-  pinMode(LED_BUILTIN, OUTPUT);     // sets the digital pin as output
-#else
-#ifndef ST7789
-  display.init();                    // initialise the library
-#else
   display.init(LCD_WIDTH, LCD_HEIGHT);                    // initialise the library
-#endif
   display.setRotation(1);
   uint16_t calData[5] = { 368, 3538, 256, 3459, 7 };
-#ifndef ST7789
-  display.setTouch(calData);
-#endif
   display.fillScreen(BGCOLOR);
-#endif
 
 //  Serial.begin(115200);
 //  Serial.printf("CORE1 = %d\n", xPortGetCoreID());
-#ifdef EEPROM_START
   EEPROM.begin(32);                     // set EEPROM size. Necessary for ESP32
   loadEEPROM();                         // read last settings from EEPROM
-#else
-  set_default();
-#endif
-//  set_default();
   wfft = fft_mode;
   wdds = dds_mode;
 
@@ -199,23 +158,6 @@ void setup(){
   rate_i2s_mode_config();
 }
 
-#ifndef NOLCD
-#ifdef DOT_GRID
-void DrawGrid() {
-  int disp_leng;
-  disp_leng = DISPLNG;
-  for (int x=0; x<=disp_leng; x += 5) { // Horizontal Line
-    for (int y=0; y<=LCD_YMAX; y += DOTS_DIV) {
-      display.drawPixel(XOFF+x, YOFF+y, GRIDCOLOR);
-    }
-  }
-  for (int x=0; x<=disp_leng; x += DOTS_DIV ) { // Vertical Line
-    for (int y=0; y<=LCD_YMAX; y += 5) {
-      display.drawPixel(XOFF+x, YOFF+y, GRIDCOLOR);
-    }
-  }
-}
-#else
 void DrawGrid() {
   display.drawFastVLine(XOFF, YOFF, LCD_YMAX, FRMCOLOR);          // left vertical line
   display.drawFastVLine(XOFF+SAMPLES, YOFF, LCD_YMAX, FRMCOLOR);  // right vertical line
@@ -238,8 +180,6 @@ void DrawGrid() {
     }
   }
 }
-#endif
-#endif
 
 void DrawText() {
   if (info_mode & INFO_OFF)
@@ -274,6 +214,13 @@ void DrawText() {
     waveFreq[1] = 0;
     waveDuty[1] = 0;
   }
+  display.setCursor(MENU, YOFF); // Temporary debugging info
+  display.print("info_mode = ");
+  display.print(info_mode);
+  display.setCursor(MENU, YOFF + 8);
+  display.print("rate = ");
+  display.print(rate);
+
   DrawText_big();
   if (!fft_mode)
     draw_trig_level(GRIDCOLOR); // draw trig_lv mark
@@ -479,9 +426,6 @@ void loop() {
   unsigned long auto_time;
 
   timeExec = 100;
-#ifdef NOLCD
-  digitalWrite(LED_BUILTIN, LED_ON);  // GPIO2 is used for touch CS
-#endif
   if (rate > RATE_DMA) {
     set_trigger_ad();
     auto_time = pow(10, rate / 3) + 5;
@@ -528,9 +472,6 @@ void loop() {
       sample_dual_us(US_DIV[rate] / DOTS_DIV);
 //      sample_dual_ms(HREF[rate] / 10);
     }
-#ifdef NOLCD
-    digitalWrite(LED_BUILTIN, LED_OFF); // GPIO2 is used for touch CS
-#endif
     draw_screen();
   } else if (Start) { // 40ms - 400ms sampling
     timeExec = 5000;
@@ -548,9 +489,7 @@ void loop() {
           break;
       }
       if (rate<RATE_ROLL) { // sampling rate has been changed
-#ifndef NOLCD
         display.fillScreen(BGCOLOR);
-#endif
         break;
       }
       st += r;
@@ -569,17 +508,10 @@ void loop() {
       if (ch0_mode == MODE_OFF) payload[0] = -1;
       if (ch1_mode == MODE_OFF) payload[SAMPLES] = -1;
       xTaskNotify(taskHandle, 0, eNoAction);  // notify Websocket server task
-#ifndef NOLCD
       ClearAndDrawDot(i);
-#endif
     }
-#ifndef NOLCD
     DrawGrid(disp_leng);  // right side grid   
-#endif
     // Serial.println(millis()-st0);
-#ifdef NOLCD
-    digitalWrite(LED_BUILTIN, LED_OFF); // GPIO2 is used for touch CS
-#endif
 //    DrawGrid();
     DrawText();
   } else {
@@ -605,18 +537,14 @@ void draw_screen() {
 //  display.fillScreen(BGCOLOR);
   if (wfft != fft_mode) {
     fft_mode = wfft;
-#ifndef NOLCD
     display.fillScreen(BGCOLOR);
-#endif
   }
   if (fft_mode) {
     DrawText();
     plotFFT();
   } else {
-#ifndef NOLCD
     DrawGrid();
     ClearAndDrawGraph();
-#endif
     DrawText();
     if (ch0_mode == MODE_OFF) payload[0] = -1;
     if (ch1_mode == MODE_OFF) payload[SAMPLES] = -1;
@@ -630,7 +558,6 @@ void measure_frequency(int ch) {
   int x;
   byte y, yduty;
   freqDuty(ch);
-#ifndef NOLCD
   if (ch == 0) {
     yduty = 1;
     display.setTextColor(CH1COLOR, BGCOLOR);
@@ -656,7 +583,6 @@ void measure_frequency(int ch) {
   y = yduty;
   TextBG(&y, x, 6);
   display.print(waveDuty[ch], 1);  display.print('%');
-#endif
 }
 
 void measure_voltage(int ch) {
@@ -666,7 +592,6 @@ void measure_voltage(int ch) {
   float vavr = VRF * dataAve[ch] / 40950.0;
   float vmax = VRF * dataMax[ch] / 4095.0;
   float vmin = VRF * dataMin[ch] / 4095.0;
-#ifndef NOLCD
   x = MENU + 48, y = 42;  // Small
   if (ch == 0) {
     display.setTextColor(CH1COLOR, BGCOLOR);
@@ -680,7 +605,6 @@ void measure_voltage(int ch) {
   display.print("avr");  display.print(vavr); if (vavr >= 0.0) display.print('V');
   TextBG(&y, x, 8);
   display.print("min");  display.print(vmin); if (vmin >= 0.0) display.print('V');
-#endif
 }
 
 void sample_dual_us(unsigned int r) { // dual channel. r > 67
@@ -778,12 +702,10 @@ void plotFFT() {
   for (int i = 1; i < FFT_N/2; i++) {
     float db = log10(vReal[i]);
     payload[i] = constrain((int)(1024.0 * (db - 1.6)), 0, 4095);
-#ifndef NOLCD
     int dat = constrain((int)(50.0 * (db - 1.6)), 0, ylim);
     display.drawFastVLine(i * 2, ylim - lastplot[i], lastplot[i], BGCOLOR); // erase old
     display.drawFastVLine(i * 2, ylim - dat, dat, CH1COLOR);
     newplot[i] = dat;
-#endif
   }
   draw_scale();
 }
@@ -791,16 +713,13 @@ void plotFFT() {
 void draw_scale() {
   int ylim = 204;
   float fhref, nyquist;
-#ifndef NOLCD
   display.setTextColor(TXTCOLOR);
   display.setCursor(0, ylim); display.print("0Hz"); 
-#endif
   fhref = freqhref();
   nyquist = 5.0e6 / fhref; // Nyquist frequency
   long inyquist = nyquist;
   payload[FFT_N/2] = (short) (inyquist / 1000);
   payload[FFT_N/2+1] = (short) (inyquist % 1000);
-#ifndef NOLCD
   if (nyquist > 999.0) {
     nyquist = nyquist / 1000.0;
     if (nyquist > 99.5) {
@@ -818,7 +737,6 @@ void draw_scale() {
     display.setCursor(116, ylim); display.print(nyquist/2,0);
     display.setCursor(238, ylim); display.print(nyquist,0);
   }
-#endif
 }
 
 float freqhref() {
