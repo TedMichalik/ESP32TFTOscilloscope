@@ -242,7 +242,6 @@ void DrawGrid() {
 #endif
 
 void DrawText() {
-#ifndef NOLCD
   if (info_mode & INFO_OFF)
     return;
   display.setTextSize(1); // Small
@@ -254,38 +253,48 @@ void DrawText() {
   display.print("FRQ2");
   display.setCursor(260, BOTTOM_LINE);
   display.print("DTY2");
-#endif
 
-//  if (info_mode && Start) {
-  if (info_mode & (INFO_FRQ1 | INFO_VOL1)) {
+  if (ch0_mode == MODE_ON) {
     dataAnalize(0);
     if (info_mode & INFO_FRQ1)
       measure_frequency(0);
     if (info_mode & INFO_VOL1)
       measure_voltage(0);
+  } else {
+    waveFreq[0] = 0;
+    waveDuty[0] = 0;
   }
-  if (info_mode & (INFO_FRQ2 | INFO_VOL2)) {
+  if (ch1_mode == MODE_ON) {
     dataAnalize(1);
     if (info_mode & INFO_FRQ2)
       measure_frequency(1);
     if (info_mode & INFO_VOL2)
       measure_voltage(1);
+  } else {
+    waveFreq[1] = 0;
+    waveDuty[1] = 0;
   }
-#ifndef NOLCD
   DrawText_big();
   if (!fft_mode)
     draw_trig_level(GRIDCOLOR); // draw trig_lv mark
-#endif
 }
 
-#ifndef NOLCD
 void draw_trig_level(int color) { // draw trig_lv mark
   int x, y;
 
+  clear_trig_level();
   x = XOFF+DISPLNG+1; y = YOFF+LCD_YMAX - trig_lv;
   display.drawLine(x, y, x+8, y+4, color);
   display.drawLine(x+8, y+4, x+8, y-4, color);
   display.drawLine(x+8, y-4, x, y, color);
+}
+
+void clear_trig_level() {
+  int x, y;
+
+  x = XOFF+DISPLNG+1;
+  y = YOFF;
+  display.fillRect(x, y, 9, LCD_YMAX, BGCOLOR);   // clear trig_lv mark area
 }
 
 void display_range(byte rng) {
@@ -335,12 +344,6 @@ void ClearAndDrawGraph() {
   p6 = p5 + 1;
   p7 = data[sample+1];
   p8 = p7 + 1;
-#if 0
-  for (int x=0; x<disp_leng; x++) {
-    display.drawPixel(XOFF+x, YOFF+LCD_YMAX-data[sample+0][x], CH1COLOR);
-    display.drawPixel(XOFF+x, YOFF+LCD_YMAX-data[sample+1][x], CH2COLOR);
-  }
-#else
   for (int x=0; x<disp_leng; x++) {
     if (ch0_mode != MODE_OFF) {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p1++, XOFF+x+1, YOFF+LCD_YMAX-*p2++, BGCOLOR);
@@ -351,18 +354,9 @@ void ClearAndDrawGraph() {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p7++, XOFF+x+1, YOFF+LCD_YMAX-*p8++, CH2COLOR);
     }
   }
-#endif
 }
 
 void ClearAndDrawDot(int i) {
-#if 0
-  for (int x=0; x<DISPLNG; x++) {
-    display.drawPixel(XOFF+i, YOFF+LCD_YMAX-odat01, BGCOLOR);
-    display.drawPixel(XOFF+i, YOFF+LCD_YMAX-odat11, BGCOLOR);
-    display.drawPixel(XOFF+i, YOFF+LCD_YMAX-data[sample+0][i], CH1COLOR);
-    display.drawPixel(XOFF+i, YOFF+LCD_YMAX-data[sample+1][i], CH2COLOR);
-  }
-#else
   if (i < 1) {
     DrawGrid(i);
     return;
@@ -375,10 +369,8 @@ void ClearAndDrawDot(int i) {
     display.drawLine(XOFF+i-1, YOFF+LCD_YMAX-odat10,   XOFF+i, YOFF+LCD_YMAX-odat11, BGCOLOR);
     display.drawLine(XOFF+i-1, YOFF+LCD_YMAX-data[1][i-1], XOFF+i, YOFF+LCD_YMAX-data[1][i], CH2COLOR);
   }
-#endif
   DrawGrid(i);
 }
-#endif
 
 #define BENDX 3480  // 85% of 4096
 #define BENDY 3072  // 75% of 4096

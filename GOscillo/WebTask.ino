@@ -55,12 +55,10 @@ void handle_ch1_mode() {
     Serial.println(val);
     if (val == "chon") {
       ch0_mode = MODE_ON;       // CH1 ON
-      info_mode |= INFO_FRQ1;
     } else if (val == "chinv") {
       ch0_mode = MODE_INV;      // CH1 INV
     } else if (val == "choff") {
       ch0_mode = MODE_OFF;      // CH1 OFF
-      info_mode &= !INFO_FRQ1;
     }
     server.send(200, "text/html", "OK");  // response 200, send OK
   }
@@ -72,12 +70,10 @@ void handle_ch2_mode() {
     Serial.println(val);
     if (val == "chon") {
       ch1_mode = MODE_ON;       // CH2 ON
-      info_mode |= INFO_FRQ2;
     } else if (val == "chinv") {
       ch1_mode = MODE_INV;      // CH2 INV
     } else if (val == "choff") {
       ch1_mode = MODE_OFF;      // CH2 OFF
-      info_mode &= !INFO_FRQ2;
     }
     server.send(200, "text/html", "OK");  // response 200, send OK
   }
@@ -427,9 +423,11 @@ ws.onmessage = function(evt) {
     for (var i = 1; i < displng; i++){
       ctx.lineTo(groundX0+dotpich*i, groundY0-cnstH*datas[i]);
     }
-    if (datas.length == (displng + 2)) {
+    if (datas.length == (displng + 4)) {
       var frequency = (10000 * datas[displng] + datas[displng+1]) / 100.0;
       document.getElementById("ch1_freq").textContent = String(frequency)+"Hz";
+      var duty = (10000 * datas[displng+2] + datas[displng+3]) / 100.0;
+      document.getElementById("ch1_duty").textContent = String(duty)+"%";
     }
   }
   ctx.stroke();
@@ -443,6 +441,12 @@ ws.onmessage = function(evt) {
     ctx.stroke();
     var frequency = (10000 * datas[displng+displng] + datas[displng+displng+1]) / 100.0;
     document.getElementById("ch1_freq").textContent = String(frequency)+"Hz";
+    var duty = (10000 * datas[displng+displng+2] + datas[displng+displng+3]) / 100.0;
+    document.getElementById("ch1_duty").textContent = String(duty)+"%";
+    var frequency = (10000 * datas[displng+displng+4] + datas[displng+displng+5]) / 100.0;
+    document.getElementById("ch2_freq").textContent = String(frequency)+"Hz";
+    var duty = (10000 * datas[displng+displng+6] + datas[displng+displng+7]) / 100.0;
+    document.getElementById("ch2_duty").textContent = String(duty)+"%";
   }
   ctx.restore();
 };
@@ -684,8 +688,6 @@ async function post_duty() {
 <label><input type="radio" name="run_hold" value="run">RUN</label>
 <label><input type="radio" name="run_hold" value="hold">HOLD</label>
 </form>
-</div>
-<hr>
 <div>
 <form id='waveform1' onchange='postform(this.id)'>
 <label>CH1</label>
@@ -708,14 +710,13 @@ async function post_duty() {
 <input type="range" id='ofsva2' name="offset2" min="-100" max="100" step="1" value="%CH2OFFSET%">
 <button type="button" id='reset_button2' name='reset2' value='2' onclick='postreset(this.id)'>reset</button></form>
 </div>
-<hr>
 <div>
 <form id='fft' onchange='postform(this.id)'>
 <label></label>
 <label><input type="radio" name="wavefft" value="wave">Wave</label>
 <label><input type="radio" name="wavefft" value="fft">FFT</label>
 </form></div>
-
+<hr>
 <div>
 <form id='f_pwm' onchange='postform(this.id)'>
 <label>Pulse</label>
@@ -778,7 +779,18 @@ Hz</label>
 Hz</label>
 </div>
 
-<label>CH1 frequency: </label><label id="ch1_freq"></label>
+<div>
+<label>CH1 frequency : </label><label id="ch1_freq"></label>
+</div>
+<div>
+<label>CH1 duty cycle: </label><label id="ch1_duty"></label>
+</div>
+<div>
+<label>CH2 frequency : </label><label id="ch2_freq"></label>
+</div>
+<div>
+<label>CH2 duty cycle: </label><label id="ch2_duty"></label>
+</div>
 </body>
 </html>
 )=====";
@@ -880,11 +892,19 @@ void setup1(void * pvParameters) {
       } else if (rate >= RATE_DUAL || (ch0_mode == MODE_OFF && ch1_mode != MODE_OFF)) {
         payload[SAMPLES*2] = (short) ((long)(100.0*waveFreq[0]) / 10000);
         payload[SAMPLES*2+1] = (short) ((long)(100.0*waveFreq[0]) % 10000);
-        webSocket.broadcastBIN((byte *) payload, SAMPLES * 4 + 4);
+        payload[SAMPLES*2+2] = (short) ((long)(100.0*waveDuty[0]) / 10000);
+        payload[SAMPLES*2+3] = (short) ((long)(100.0*waveDuty[0]) % 10000);
+        payload[SAMPLES*2+4] = (short) ((long)(100.0*waveFreq[1]) / 10000);
+        payload[SAMPLES*2+5] = (short) ((long)(100.0*waveFreq[1]) % 10000);
+        payload[SAMPLES*2+6] = (short) ((long)(100.0*waveDuty[1]) / 10000);
+        payload[SAMPLES*2+7] = (short) ((long)(100.0*waveDuty[1]) % 10000);
+        webSocket.broadcastBIN((byte *) payload, SAMPLES * 4 + 16);
       } else {
         payload[SAMPLES] = (short) ((long)(100.0*waveFreq[0]) / 10000);
         payload[SAMPLES+1] = (short) ((long)(100.0*waveFreq[0]) % 10000);
-        webSocket.broadcastBIN((byte *) payload, SAMPLES * 2 + 4);
+        payload[SAMPLES+2] = (short) ((long)(100.0*waveDuty[0]) / 10000);
+        payload[SAMPLES+3] = (short) ((long)(100.0*waveDuty[0]) % 10000);
+        webSocket.broadcastBIN((byte *) payload, SAMPLES * 2 + 8);
       }
     }
     webSocket.loop();
