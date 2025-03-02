@@ -325,12 +325,8 @@ void ClearAndDrawGraph() {
   p7 = data[sample+1];
   p8 = p7 + 1;
 
-  if (ch0_mode == MODE_ON) {
-    ch0_active = true;
-  }
-  if (ch1_mode == MODE_ON) {
-    ch1_active = true;
-  }
+  ch0_active = (ch0_mode == MODE_ON);
+  ch1_active = (ch1_mode == MODE_ON);
 
   for (int x=0; x<disp_leng; x++) {
     if (ch0_active) {
@@ -341,12 +337,6 @@ void ClearAndDrawGraph() {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p5++, XOFF+x+1, YOFF+LCD_YMAX-*p6++, BGCOLOR);
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p7++, XOFF+x+1, YOFF+LCD_YMAX-*p8++, CH2COLOR);
     }
-  }
-  if (ch0_mode != MODE_ON) {
-    ch0_active = false;
-  }
-  if (ch1_mode != MODE_ON) {
-    ch1_active = false;
   }
 }
 
@@ -558,18 +548,12 @@ void loop() {
       ClearAndDrawDot(i);
     }
     DrawGrid(disp_leng);  // right side grid   
-    // Serial.println(millis()-st0);
-//    DrawGrid();
-    DrawText();
-  } else {
     DrawText();
   }
   if (trig_mode == TRIG_ONE)
     Start = false;
   CheckSW();
-#ifdef EEPROM_START
   saveEEPROM();                         // save settings to EEPROM if necessary
-#endif
   if (wdds != dds_mode) {
     if (wdds) {
       dds_setup();
@@ -590,6 +574,9 @@ void draw_screen() {
     DrawText();
     plotFFT();
   } else {
+    if ((ch0_active && (ch0_mode != MODE_ON)) || (ch1_active && (ch1_mode != MODE_ON))) {
+      display.fillScreen(BGCOLOR); // Clear display if either channel turned off
+    }
     DrawGrid();
     ClearAndDrawGraph();
     DrawText();
@@ -598,7 +585,6 @@ void draw_screen() {
   }
   xTaskNotify(taskHandle, 0, eNoAction);  // notify Websocket server task
   delay(10);    // wait Web task to send it (adhoc fix)
-//  display.display();
 }
 
 void display_freqduty(int ch) {
