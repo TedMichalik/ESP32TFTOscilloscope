@@ -194,10 +194,37 @@ void DrawText() {
   display.setCursor(260, BOTTOM_LINE);
   display.print("DTY2");
 
+  disp_ch0(1, 1);         // CH1
+  display_ac_inv(1, CH0DCSW, ch0_mode);
+  display.setCursor(30, 1);   // CH1 range
+  disp_ch0_range();
+  display.setCursor(60, 1);  // Rate
+  disp_sweep_rate();
+
+  display.setCursor(140, 1);  // Function
+  display.setTextColor(HIGHCOLOR, BGCOLOR);
+  if (Start == false) {
+    display.setTextColor(REDCOLOR, BGCOLOR);
+    display.print("HOLD");
+  } else {
+    display.print("RUN");
+  }
+
+  disp_ch1(1, BOTTOM_LINE);         // CH2
+  display_ac_inv(BOTTOM_LINE, CH1DCSW, ch1_mode);
+  display.setCursor(30, BOTTOM_LINE);   // CH2 range
+  disp_ch1_range();
+  set_pos_color(60, BOTTOM_LINE, TXTCOLOR); // Trigger souce
+  disp_trig_source(); 
+  display.setCursor(100, BOTTOM_LINE);  // Trigger edge
+  disp_trig_edge();
+  display.setCursor(140, BOTTOM_LINE);  // Trigger mode
+  disp_trig_mode();
+
   if (ch0_mode == MODE_ON) {
     dataAnalize(0);
     if (info_mode & INFO_FRQ1)
-      measure_frequency(0);
+      freqDuty(0);
     if (info_mode & INFO_VOL1)
       measure_voltage(0);
   } else {
@@ -207,13 +234,17 @@ void DrawText() {
   if (ch1_mode == MODE_ON) {
     dataAnalize(1);
     if (info_mode & INFO_FRQ2)
-      measure_frequency(1);
+      freqDuty(1);
     if (info_mode & INFO_VOL2)
       measure_voltage(1);
   } else {
     waveFreq[1] = 0;
     waveDuty[1] = 0;
   }
+  display_freqduty(0);
+  display_freqduty(1);
+
+  display.setTextColor(TXTCOLOR, BGCOLOR);
   display.setCursor(MENU, YOFF); // Temporary debugging info
   display.print("info_mode = ");
   display.print(info_mode);
@@ -221,7 +252,7 @@ void DrawText() {
   display.print("rate = ");
   display.print(rate);
 
-  DrawText_big();
+//  DrawText_big();
   if (!fft_mode)
     draw_trig_level(GRIDCOLOR); // draw trig_lv mark
 }
@@ -554,10 +585,9 @@ void draw_screen() {
 //  display.display();
 }
 
-void measure_frequency(int ch) {
+void display_freqduty(int ch) {
   int x;
   byte y, yduty;
-  freqDuty(ch);
   if (ch == 0) {
     yduty = 1;
     display.setTextColor(CH1COLOR, BGCOLOR);
