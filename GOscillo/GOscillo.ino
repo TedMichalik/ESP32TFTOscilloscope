@@ -249,6 +249,9 @@ void DrawText() {
   display.print("info_mode = ");
   display.print(info_mode);
   display.setCursor(MENU, YOFF + 8);
+  display.print("trig_mode = ");
+  display.print(trig_mode);
+  display.setCursor(MENU, YOFF + 16);
   display.print("rate = ");
   display.print(rate);
 
@@ -309,7 +312,6 @@ void ClearAndDrawGraph() {
   byte *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
   int disp_leng;
   disp_leng = DISPLNG-1;
-  bool ch1_active = ch1_mode != MODE_OFF && !(rate < RATE_DUAL && ch0_mode != MODE_OFF);
   if (sample == 0)
     clear = 2;
   else
@@ -322,8 +324,16 @@ void ClearAndDrawGraph() {
   p6 = p5 + 1;
   p7 = data[sample+1];
   p8 = p7 + 1;
+
+  if (ch0_mode == MODE_ON) {
+    ch0_active = true;
+  }
+  if (ch1_mode == MODE_ON) {
+    ch1_active = true;
+  }
+
   for (int x=0; x<disp_leng; x++) {
-    if (ch0_mode != MODE_OFF) {
+    if (ch0_active) {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p1++, XOFF+x+1, YOFF+LCD_YMAX-*p2++, BGCOLOR);
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p3++, XOFF+x+1, YOFF+LCD_YMAX-*p4++, CH1COLOR);
     }
@@ -331,6 +341,12 @@ void ClearAndDrawGraph() {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p5++, XOFF+x+1, YOFF+LCD_YMAX-*p6++, BGCOLOR);
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p7++, XOFF+x+1, YOFF+LCD_YMAX-*p8++, CH2COLOR);
     }
+  }
+  if (ch0_mode != MODE_ON) {
+    ch0_active = false;
+  }
+  if (ch1_mode != MODE_ON) {
+    ch1_active = false;
   }
 }
 
