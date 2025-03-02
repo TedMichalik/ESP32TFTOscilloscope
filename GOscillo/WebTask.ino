@@ -431,12 +431,14 @@ ws.onmessage = function(evt) {
     }
   }
   ctx.stroke();
-  if (datas.length >= (displng+displng) && datas[displng] >= 0) {
-    ctx.beginPath();
-    ctx.strokeStyle = "rgb(255,255,0)";
-    ctx.moveTo(groundX0, groundY0-cnstH*datas[displng]);
-    for (var i = 1; i < displng; i++){
-      ctx.lineTo(groundX0+dotpich*i, groundY0-cnstH*datas[i+displng]);
+  if (datas.length >= (displng+displng)) {
+    if (datas[displng] >= 0) {
+      ctx.beginPath();
+      ctx.strokeStyle = "rgb(255,255,0)";
+      ctx.moveTo(groundX0, groundY0-cnstH*datas[displng]);
+      for (var i = 1; i < displng; i++){
+        ctx.lineTo(groundX0+dotpich*i, groundY0-cnstH*datas[i+displng]);
+      }
     }
     ctx.stroke();
     var frequency = (10000 * datas[displng+displng] + datas[displng+displng+1]) / 100.0;
@@ -889,7 +891,7 @@ void setup1(void * pvParameters) {
         payload[FFT_N/2+2] = (short) ((long)(100.0*waveFreq[0]) / 10000);
         payload[FFT_N/2+3] = (short) ((long)(100.0*waveFreq[0]) % 10000);
         webSocket.broadcastBIN((byte *) payload, FFT_N + 8);
-      } else if (rate >= RATE_DUAL || (ch0_mode == MODE_OFF && ch1_mode != MODE_OFF)) {
+      } else if (rate >= RATE_DUAL) {
         payload[SAMPLES*2] = (short) ((long)(100.0*waveFreq[0]) / 10000);
         payload[SAMPLES*2+1] = (short) ((long)(100.0*waveFreq[0]) % 10000);
         payload[SAMPLES*2+2] = (short) ((long)(100.0*waveDuty[0]) / 10000);
