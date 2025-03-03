@@ -217,6 +217,7 @@ void DrawText() {
   }
   display_freqduty(0);
 
+  if (fft_mode) return;
   display.setTextColor(TXTCOLOR, BGCOLOR);
   display.setCursor(MENU, YOFF); // Temporary debugging info
   display.print("info_mode = ");
@@ -228,7 +229,6 @@ void DrawText() {
   display.print("rate = ");
   display.print(rate);
 
-  if (fft_mode) return;
   display.setCursor(170, BOTTOM_LINE);
   display.print("FRQ2");
   display.setCursor(260, BOTTOM_LINE);
@@ -724,7 +724,7 @@ void plotFFT() {
     vImag[i] = 0.0;
   }
   FFT.dcRemoval();
-  FFT.windowing(FFTWindow::Hann, FFTDirection::Forward);  // Weigh data
+  FFT.windowing(FFTWindow::Hamming, FFTDirection::Forward);  // Weigh data
   FFT.compute(FFTDirection::Forward);                     // Compute FFT
   FFT.complexToMagnitude();                               // Compute magnitudes
   newplot = data[sample];
@@ -767,6 +767,10 @@ void draw_scale() {
   } else {
     display.setCursor(116, ylim); display.print(nyquist/2,0);
     display.setCursor(238, ylim); display.print(nyquist,0);
+  }
+  for (int j = 10; j < 80; j += 10) {
+    display.setCursor(XOFF + FFT_N, YOFF + (j * DOTS_DIV / 10));
+    display.print(-j); display.print("dB");
   }
 }
 

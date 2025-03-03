@@ -378,15 +378,13 @@ ws.onmessage = function(evt) {
       ctx.lineTo(7*pichX+5, groundY0-i*pichH-j);
     }
   }
-  //ctx.moveTo(groundX0, groundY0-i*pichH);
-  //ctx.lineTo(groundW, groundY0-i*pichH);
   ctx.stroke();
   ctx.restore();
   ctx.save();
   ctx.beginPath();
   ctx.strokeStyle = "rgb(0,255,0)";
   if (datas.length == (fftsamples + 6)) {
-    var base = groundY0-cnstH*512;
+    var base = groundY0-pichH;
     for (var i = 1; i < fftsamples; i++){
       ctx.moveTo(groundX0+fftpich*i, base);
       ctx.lineTo(groundX0+fftpich*i, base-cnstH*datas[i]);
