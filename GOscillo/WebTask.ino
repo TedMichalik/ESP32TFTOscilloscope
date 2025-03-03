@@ -374,8 +374,8 @@ ws.onmessage = function(evt) {
     ctx.moveTo(groundX0, groundY0-i*pichH);
     ctx.lineTo(groundW, groundY0-i*pichH);
     for (var j=10; j<50; j=j+10){
-      ctx.moveTo(6*pichX-5, groundY0-i*pichH-j);
-      ctx.lineTo(6*pichX+5, groundY0-i*pichH-j);
+      ctx.moveTo(7*pichX-5, groundY0-i*pichH-j);
+      ctx.lineTo(7*pichX+5, groundY0-i*pichH-j);
     }
   }
   ctx.moveTo(groundX0, groundY0-i*pichH);
@@ -651,7 +651,7 @@ async function post_duty() {
 }
 </script>
 <body>
-<h3>ESP32 Web Oscilloscope ver. 1.33</h3>
+<h3>ESP32 Web Oscilloscope ver. 2.0</h3>
 <div style='float: left; margin-right: 10px'>
 <canvas id='cvs1' width='%WIDTH%' height='%HEIGHT%' class='float'></canvas></div>
 <form id='rate0'>Rate: <label id="rate_area">%RATE% %REALDMA%</label>
@@ -890,6 +890,8 @@ void setup1(void * pvParameters) {
       if (rate < RATE_ROLL && fft_mode) {
         payload[FFT_N/2+2] = (short) ((long)(100.0*waveFreq[0]) / 10000);
         payload[FFT_N/2+3] = (short) ((long)(100.0*waveFreq[0]) % 10000);
+        payload[FFT_N/2+4] = (short) ((long)(100.0*waveDuty[0]) / 10000);
+        payload[FFT_N/2+5] = (short) ((long)(100.0*waveDuty[0]) % 10000);
         webSocket.broadcastBIN((byte *) payload, FFT_N + 8);
       } else if (rate >= RATE_DUAL) {
         payload[SAMPLES*2] = (short) ((long)(100.0*waveFreq[0]) / 10000);

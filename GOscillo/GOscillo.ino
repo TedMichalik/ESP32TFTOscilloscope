@@ -189,10 +189,6 @@ void DrawText() {
   display.print("FRQ1");
   display.setCursor(260, 1);
   display.print("DTY1");
-  display.setCursor(170, BOTTOM_LINE);
-  display.print("FRQ2");
-  display.setCursor(260, BOTTOM_LINE);
-  display.print("DTY2");
 
   disp_ch0(1, 1);         // CH1
   display_ac_inv(1, CH0DCSW, ch0_mode);
@@ -209,18 +205,6 @@ void DrawText() {
   } else {
     display.print("RUN");
   }
-
-  disp_ch1(1, BOTTOM_LINE);         // CH2
-  display_ac_inv(BOTTOM_LINE, CH1DCSW, ch1_mode);
-  display.setCursor(30, BOTTOM_LINE);   // CH2 range
-  disp_ch1_range();
-  set_pos_color(60, BOTTOM_LINE, TXTCOLOR); // Trigger souce
-  disp_trig_source(); 
-  display.setCursor(100, BOTTOM_LINE);  // Trigger edge
-  disp_trig_edge();
-  display.setCursor(140, BOTTOM_LINE);  // Trigger mode
-  disp_trig_mode();
-
   if (ch0_mode == MODE_ON) {
     dataAnalize(0);
     if (info_mode & INFO_FRQ1)
@@ -231,18 +215,7 @@ void DrawText() {
     waveFreq[0] = 0;
     waveDuty[0] = 0;
   }
-  if (ch1_mode == MODE_ON) {
-    dataAnalize(1);
-    if (info_mode & INFO_FRQ2)
-      freqDuty(1);
-    if (info_mode & INFO_VOL2)
-      measure_voltage(1);
-  } else {
-    waveFreq[1] = 0;
-    waveDuty[1] = 0;
-  }
   display_freqduty(0);
-  display_freqduty(1);
 
   display.setTextColor(TXTCOLOR, BGCOLOR);
   display.setCursor(MENU, YOFF); // Temporary debugging info
@@ -255,9 +228,35 @@ void DrawText() {
   display.print("rate = ");
   display.print(rate);
 
-//  DrawText_big();
-  if (!fft_mode)
-    draw_trig_level(GRIDCOLOR); // draw trig_lv mark
+  if (fft_mode) return;
+  display.setCursor(170, BOTTOM_LINE);
+  display.print("FRQ2");
+  display.setCursor(260, BOTTOM_LINE);
+  display.print("DTY2");
+  disp_ch1(1, BOTTOM_LINE);         // CH2
+  display_ac_inv(BOTTOM_LINE, CH1DCSW, ch1_mode);
+  display.setCursor(30, BOTTOM_LINE);   // CH2 range
+  disp_ch1_range();
+  set_pos_color(60, BOTTOM_LINE, TXTCOLOR); // Trigger souce
+  disp_trig_source(); 
+  display.setCursor(100, BOTTOM_LINE);  // Trigger edge
+  disp_trig_edge();
+  display.setCursor(140, BOTTOM_LINE);  // Trigger mode
+  disp_trig_mode();
+
+  if (ch1_mode == MODE_ON) {
+    dataAnalize(1);
+    if (info_mode & INFO_FRQ2)
+      freqDuty(1);
+    if (info_mode & INFO_VOL2)
+      measure_voltage(1);
+  } else {
+    waveFreq[1] = 0;
+    waveDuty[1] = 0;
+  }
+  display_freqduty(1);
+
+  draw_trig_level(GRIDCOLOR); // draw trig_lv mark
 }
 
 void draw_trig_level(int color) { // draw trig_lv mark
@@ -610,7 +609,7 @@ void display_freqduty(int ch) {
     display.print('k');
   }
   display.print("Hz");
-  if (fft_mode) return;
+//  if (fft_mode) return;
   x = 290;
   y = yduty;
   TextBG(&y, x, 6);
@@ -717,7 +716,7 @@ void sample_200us(unsigned int r) { // adc1_get_raw() with timing, channel 0 or 
 
 void plotFFT() {
   byte *lastplot, *newplot;
-  int ylim = 200;
+  int y = YOFF + LCD_YMAX;
 
   int clear = (sample == 0) ? 2 : 0;
   for (int i = 0; i < FFT_N; i++) {
@@ -734,16 +733,16 @@ void plotFFT() {
   for (int i = 1; i < FFT_N/2; i++) {
     float db = log10(vReal[i]);
     payload[i] = constrain((int)(1024.0 * (db - 1.6)), 0, 4095);
-    int dat = constrain((int)(50.0 * (db - 1.6)), 0, ylim);
-    display.drawFastVLine(i * 2, ylim - lastplot[i], lastplot[i], BGCOLOR); // erase old
-    display.drawFastVLine(i * 2, ylim - dat, dat, CH1COLOR);
+    int dat = constrain((int)(50.0 * (db - 1.6)), 0, LCD_YMAX);
+    display.drawFastVLine(i * 2, y - lastplot[i], lastplot[i], BGCOLOR); // erase old
+    display.drawFastVLine(i * 2, y - dat, dat, CH1COLOR);
     newplot[i] = dat;
   }
   draw_scale();
 }
 
 void draw_scale() {
-  int ylim = 204;
+  int ylim = BOTTOM_LINE + 4;
   float fhref, nyquist;
   display.setTextColor(TXTCOLOR);
   display.setCursor(0, ylim); display.print("0Hz"); 
