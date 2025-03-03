@@ -378,14 +378,14 @@ ws.onmessage = function(evt) {
       ctx.lineTo(7*pichX+5, groundY0-i*pichH-j);
     }
   }
-  ctx.moveTo(groundX0, groundY0-i*pichH);
-  ctx.lineTo(groundW, groundY0-i*pichH);
+  //ctx.moveTo(groundX0, groundY0-i*pichH);
+  //ctx.lineTo(groundW, groundY0-i*pichH);
   ctx.stroke();
   ctx.restore();
   ctx.save();
   ctx.beginPath();
   ctx.strokeStyle = "rgb(0,255,0)";
-  if (datas.length == (fftsamples + 4)) {
+  if (datas.length == (fftsamples + 6)) {
     var base = groundY0-cnstH*512;
     for (var i = 1; i < fftsamples; i++){
       ctx.moveTo(groundX0+fftpich*i, base);
@@ -417,6 +417,8 @@ ws.onmessage = function(evt) {
       ctx.fillText(String(nyquist/1000)+"kHz", 8*64, base + 10);
     var frequency = (10000 * datas[fftsamples+2] + datas[fftsamples+3]) / 100.0;
     document.getElementById("ch1_freq").textContent = String(frequency)+"Hz";
+    var duty = (10000 * datas[fftsamples+4] + datas[fftsamples+5]) / 100.0;
+    document.getElementById("ch1_duty").textContent = String(duty)+"%";
   }
   if (datas.length >= displng && datas[0] >= 0) {
     ctx.moveTo(groundX0, groundY0-cnstH*datas[0]);
@@ -892,7 +894,7 @@ void setup1(void * pvParameters) {
         payload[FFT_N/2+3] = (short) ((long)(100.0*waveFreq[0]) % 10000);
         payload[FFT_N/2+4] = (short) ((long)(100.0*waveDuty[0]) / 10000);
         payload[FFT_N/2+5] = (short) ((long)(100.0*waveDuty[0]) % 10000);
-        webSocket.broadcastBIN((byte *) payload, FFT_N + 8);
+        webSocket.broadcastBIN((byte *) payload, FFT_N + 12);
       } else if (rate >= RATE_DUAL) {
         payload[SAMPLES*2] = (short) ((long)(100.0*waveFreq[0]) / 10000);
         payload[SAMPLES*2+1] = (short) ((long)(100.0*waveFreq[0]) % 10000);
