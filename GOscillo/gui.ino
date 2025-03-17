@@ -361,12 +361,10 @@ void DrawText_big() {
   char str[5];
   byte y;
 
-  if (!(info_mode & INFO_OFF)) {
-    display.setTextSize(1);
-    y = BOTTOM_LINE;
-  } else {
+  if (info_mode & INFO_OFF) {
     return;
   }
+  display.setTextSize(1);
   disp_ch0(1, 1);         // CH1
   display_ac_inv(1, CH0DCSW, ch0_mode);
   display.setCursor(30, 1);   // CH1 range
@@ -397,6 +395,17 @@ void DrawText_big() {
   } else {
     display.print("RUN");
   }
+  y = BOTTOM_LINE;
+  disp_ch1(1, y);         // CH2
+  display_ac_inv(y, CH1DCSW, ch1_mode);
+  display.setCursor(30, y);   // CH2 range
+  disp_ch1_range();
+  set_pos_color(60, y, TXTCOLOR); // Trigger souce
+  disp_trig_source(); 
+  display.setCursor(100, y);  // Trigger edge
+  disp_trig_edge();
+  display.setCursor(140, y);  // Trigger mode
+  disp_trig_mode();
 
   if (item >= SEL_DISP) {
 //    display.print("FREQ VOLT  LARG SMAL OFF  ");
@@ -450,17 +459,6 @@ void DrawText_big() {
     display.print("DISP ");
     set_pos_menu(252, y, SEL_FCNT); // FCNT
     display.print("     ");
-  } else {
-    disp_ch1(1, y);         // CH2
-    display_ac_inv(y, CH1DCSW, ch1_mode);
-    display.setCursor(30, y);   // CH2 range
-    disp_ch1_range();
-    set_pos_color(60, y, TXTCOLOR); // Trigger souce
-    disp_trig_source(); 
-    display.setCursor(100, y);  // Trigger edge
-    disp_trig_edge();
-    display.setCursor(140, y);  // Trigger mode
-    disp_trig_mode();
   }
 }
 

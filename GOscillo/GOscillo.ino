@@ -14,28 +14,14 @@
 
 #include <WebServer.h>
 #include "User_Setup.h"
-//#define NOLCD
-
-#ifndef NOLCD
-#ifndef ST7789
-#include <SPI.h>
-#include "TFT_eSPI.h"
-TFT_eSPI display = TFT_eSPI();
-#else
 #include <Adafruit_ST7789.h> // Import the Adafruit_ST7789 library
 Adafruit_ST7789 display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-#endif
-#endif
 
 #include "driver/adc.h"
-//#include "esp_task_wdt.h"
-
-//#define BUTTON5DIR
-#define EEPROM_START 0
-#ifdef EEPROM_START
-#include <EEPROM.h>
-#endif
 #include "arduinoFFT.h"
+#include <EEPROM.h>
+
+#define EEPROM_START 0
 #define FFT_N 256
 double vReal[FFT_N]; // Real part array, actually float type
 double vImag[FFT_N]; // Imaginary part array
@@ -99,9 +85,11 @@ byte trig_mode = TRIG_AUTO, trig_lv = 10, trig_edge = TRIG_E_UP, trig_ch = ad_ch
 bool Start = true;  // Start sampling
 byte item = 0;      // Default item
 short ch0_off = 0, ch1_off = 400;
+bool ch0_active = false;
+bool ch1_active = false;
 byte data[4][SAMPLES];                  // keep twice of the number of channels to make it a double buffer
 uint16_t cap_buf[NSAMP], cap_buf1[NSAMP];
-uint16_t payload[SAMPLES*2+2];
+uint16_t payload[SAMPLES*2+8];
 byte odat00, odat01, odat10, odat11;    // old data buffer for erase
 byte sample=0;                          // index for double buffer
 bool fft_mode = false, pulse_mode = false, dds_mode = false, fcount_mode = false;
@@ -110,25 +98,13 @@ bool dac_cw_mode = false;
 int trigger_ad;
 volatile bool wfft, wdds;
 
-//#define LED_BUILTIN 2
 #define LEFTPIN   12  // LEFT
 #define RIGHTPIN  13  // RIGHT
 #define UPPIN     14  // UP
 #define DOWNPIN   27  // DOWN
 #define CH0DCSW   33  // DC/AC switch ch0
 #define CH1DCSW   17  // DC/AC switch ch1
-//#define I2CSDA    21  // I2C SDA
-//#define I2CSCL    22  // I2C SCL
-// DAC_CHANNEL_1  is GPIO25
-// DAC_CHANNEL_2  is GPIO26
-// ADC1_CHANNEL_0 is GPIO36
-// ADC1_CHANNEL_1 is GPIO37
-// ADC1_CHANNEL_2 is GPIO38
-// ADC1_CHANNEL_3 is GPIO39
-// ADC1_CHANNEL_4 is GPIO32
-// ADC1_CHANNEL_5 is GPIO33
-// ADC1_CHANNEL_6 is GPIO34
-// ADC1_CHANNEL_7 is GPIO35
+
 #define BGCOLOR   TFT_BLACK
 #define GRIDCOLOR TFT_DARKGREY
 #define CH1COLOR  TFT_GREEN
@@ -160,31 +136,17 @@ void setup(){
   pinMode(LEFTPIN, INPUT_PULLUP);   // left
   pinMode(34, ANALOG);              // Analog 34 pin for channel 0 ADC1_CHANNEL_6
   pinMode(35, ANALOG);              // Analog 35 pin for channel 1 ADC1_CHANNEL_7
-#ifdef NOLCD
-  pinMode(LED_BUILTIN, OUTPUT);     // sets the digital pin as output
-#else
-#ifndef ST7789
-  display.init();                    // initialise the library
-#else
   display.init(LCD_WIDTH, LCD_HEIGHT);                    // initialise the library
-#endif
   display.setRotation(1);
   uint16_t calData[5] = { 368, 3538, 256, 3459, 7 };
-#ifndef ST7789
-  display.setTouch(calData);
-#endif
   display.fillScreen(BGCOLOR);
-#endif
 
 //  Serial.begin(115200);
 //  Serial.printf("CORE1 = %d\n", xPortGetCoreID());
-#ifdef EEPROM_START
   EEPROM.begin(32);                     // set EEPROM size. Necessary for ESP32
   loadEEPROM();                         // read last settings from EEPROM
-#else
-  set_default();
-#endif
-//  set_default();
+  info_mode = 3;  // ***Temporary*** until info_mode fixed.
+
   wfft = fft_mode;
   wdds = dds_mode;
 
@@ -199,23 +161,6 @@ void setup(){
   rate_i2s_mode_config();
 }
 
-#ifndef NOLCD
-#ifdef DOT_GRID
-void DrawGrid() {
-  int disp_leng;
-  disp_leng = DISPLNG;
-  for (int x=0; x<=disp_leng; x += 5) { // Horizontal Line
-    for (int y=0; y<=LCD_YMAX; y += DOTS_DIV) {
-      display.drawPixel(XOFF+x, YOFF+y, GRIDCOLOR);
-    }
-  }
-  for (int x=0; x<=disp_leng; x += DOTS_DIV ) { // Vertical Line
-    for (int y=0; y<=LCD_YMAX; y += 5) {
-      display.drawPixel(XOFF+x, YOFF+y, GRIDCOLOR);
-    }
-  }
-}
-#else
 void DrawGrid() {
   display.drawFastVLine(XOFF, YOFF, LCD_YMAX, FRMCOLOR);          // left vertical line
   display.drawFastVLine(XOFF+SAMPLES, YOFF, LCD_YMAX, FRMCOLOR);  // right vertical line
@@ -238,54 +183,57 @@ void DrawGrid() {
     }
   }
 }
-#endif
-#endif
 
 void DrawText() {
-#ifndef NOLCD
   if (info_mode & INFO_OFF)
     return;
   display.setTextSize(1); // Small
-  display.setCursor(170, 1);
-  display.print("FRQ1");
-  display.setCursor(260, 1);
-  display.print("DTY1");
-  display.setCursor(170, BOTTOM_LINE);
-  display.print("FRQ2");
-  display.setCursor(260, BOTTOM_LINE);
-  display.print("DTY2");
-#endif
+  display.setCursor(MENU, YOFF);
+  display.print("info_mode = ");
+  display.print(info_mode);
+  display.setCursor(MENU, YOFF + 8);
+  display.print("rate = ");
+  display.print(rate);
 
-//  if (info_mode && Start) {
-  if (info_mode & (INFO_FRQ1 | INFO_VOL1)) {
+  if (ch0_mode == MODE_ON) {
     dataAnalize(0);
     if (info_mode & INFO_FRQ1)
       measure_frequency(0);
     if (info_mode & INFO_VOL1)
       measure_voltage(0);
+  } else {
+    waveFreq[0] = 0;
+    waveDuty[0] = 0;
   }
-  if (info_mode & (INFO_FRQ2 | INFO_VOL2)) {
+  if (ch1_mode == MODE_ON) {
     dataAnalize(1);
     if (info_mode & INFO_FRQ2)
       measure_frequency(1);
     if (info_mode & INFO_VOL2)
       measure_voltage(1);
+  } else {
+    waveFreq[1] = 0;
+    waveDuty[1] = 0;
   }
-#ifndef NOLCD
   DrawText_big();
-  if (!fft_mode)
-    draw_trig_level(GRIDCOLOR); // draw trig_lv mark
-#endif
 }
 
-#ifndef NOLCD
 void draw_trig_level(int color) { // draw trig_lv mark
   int x, y;
 
+  clear_trig_level();
   x = XOFF+DISPLNG+1; y = YOFF+LCD_YMAX - trig_lv;
   display.drawLine(x, y, x+8, y+4, color);
   display.drawLine(x+8, y+4, x+8, y-4, color);
   display.drawLine(x+8, y-4, x, y, color);
+}
+
+void clear_trig_level() {
+  int x, y;
+
+  x = XOFF+DISPLNG+1;
+  y = YOFF;
+  display.fillRect(x, y, 9, LCD_YMAX, BGCOLOR);   // clear trig_lv mark area
 }
 
 void display_range(byte rng) {
@@ -322,7 +270,6 @@ void ClearAndDrawGraph() {
   byte *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
   int disp_leng;
   disp_leng = DISPLNG-1;
-  bool ch1_active = ch1_mode != MODE_OFF && !(rate < RATE_DUAL && ch0_mode != MODE_OFF);
   if (sample == 0)
     clear = 2;
   else
@@ -335,34 +282,35 @@ void ClearAndDrawGraph() {
   p6 = p5 + 1;
   p7 = data[sample+1];
   p8 = p7 + 1;
-#if 0
   for (int x=0; x<disp_leng; x++) {
-    display.drawPixel(XOFF+x, YOFF+LCD_YMAX-data[sample+0][x], CH1COLOR);
-    display.drawPixel(XOFF+x, YOFF+LCD_YMAX-data[sample+1][x], CH2COLOR);
-  }
-#else
-  for (int x=0; x<disp_leng; x++) {
-    if (ch0_mode != MODE_OFF) {
+    if (ch0_active) {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p1++, XOFF+x+1, YOFF+LCD_YMAX-*p2++, BGCOLOR);
+    }
+    if (ch0_mode == MODE_ON) {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p3++, XOFF+x+1, YOFF+LCD_YMAX-*p4++, CH1COLOR);
+      ch0_active = true;
+    } else {
+      if (ch0_active) {
+        display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p3++, XOFF+x+1, YOFF+LCD_YMAX-*p4++, BGCOLOR);
+        ch0_active = false;
+      }
     }
     if (ch1_active) {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p5++, XOFF+x+1, YOFF+LCD_YMAX-*p6++, BGCOLOR);
+    }
+    if (ch1_mode == MODE_ON) {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p7++, XOFF+x+1, YOFF+LCD_YMAX-*p8++, CH2COLOR);
+      ch1_active = true;
+    } else {
+      if (ch1_active) {
+        display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p7++, XOFF+x+1, YOFF+LCD_YMAX-*p8++, BGCOLOR);
+        ch1_active = false;
+      }
     }
   }
-#endif
 }
 
 void ClearAndDrawDot(int i) {
-#if 0
-  for (int x=0; x<DISPLNG; x++) {
-    display.drawPixel(XOFF+i, YOFF+LCD_YMAX-odat01, BGCOLOR);
-    display.drawPixel(XOFF+i, YOFF+LCD_YMAX-odat11, BGCOLOR);
-    display.drawPixel(XOFF+i, YOFF+LCD_YMAX-data[sample+0][i], CH1COLOR);
-    display.drawPixel(XOFF+i, YOFF+LCD_YMAX-data[sample+1][i], CH2COLOR);
-  }
-#else
   if (i < 1) {
     DrawGrid(i);
     return;
@@ -375,10 +323,8 @@ void ClearAndDrawDot(int i) {
     display.drawLine(XOFF+i-1, YOFF+LCD_YMAX-odat10,   XOFF+i, YOFF+LCD_YMAX-odat11, BGCOLOR);
     display.drawLine(XOFF+i-1, YOFF+LCD_YMAX-data[1][i-1], XOFF+i, YOFF+LCD_YMAX-data[1][i], CH2COLOR);
   }
-#endif
   DrawGrid(i);
 }
-#endif
 
 #define BENDX 3480  // 85% of 4096
 #define BENDY 3072  // 75% of 4096
@@ -480,6 +426,7 @@ void set_trigger_ad() {
   } else {
     trigger_ad = advalue(trig_lv, VREF[range1], ch1_mode, ch1_off);
   }
+  draw_trig_level(GRIDCOLOR); // draw trig_lv mark
 }
 
 void loop() {
@@ -487,9 +434,6 @@ void loop() {
   unsigned long auto_time;
 
   timeExec = 100;
-#ifdef NOLCD
-  digitalWrite(LED_BUILTIN, LED_ON);  // GPIO2 is used for touch CS
-#endif
   if (rate > RATE_DMA) {
     set_trigger_ad();
     auto_time = pow(10, rate / 3) + 5;
@@ -530,15 +474,9 @@ void loop() {
       sample_i2s();
     } else if (rate == 6) { // channel 0 only 50us sampling
       sample_200us(50);
-//    } else if (rate >= 7 && rate <= 8) {  // dual channel 100us, 200us sampling
-//      sample_dual_us(HREF[rate] / 10);
     } else {                // dual channel .5ms, 1ms, 2ms, 5ms, 10ms, 20ms sampling
       sample_dual_us(US_DIV[rate] / DOTS_DIV);
-//      sample_dual_ms(HREF[rate] / 10);
     }
-#ifdef NOLCD
-    digitalWrite(LED_BUILTIN, LED_OFF); // GPIO2 is used for touch CS
-#endif
     draw_screen();
   } else if (Start) { // 40ms - 400ms sampling
     timeExec = 5000;
@@ -546,7 +484,6 @@ void loop() {
     unsigned long r;
     int disp_leng;
     disp_leng = DISPLNG;
-//    unsigned long st0 = millis();
     unsigned long st = micros();
     for (int i=0; i<disp_leng; i ++) {
       r = r_[rate - RATE_ROLL];  // rate may be changed in loop
@@ -556,9 +493,7 @@ void loop() {
           break;
       }
       if (rate<RATE_ROLL) { // sampling rate has been changed
-#ifndef NOLCD
         display.fillScreen(BGCOLOR);
-#endif
         break;
       }
       st += r;
@@ -577,18 +512,10 @@ void loop() {
       if (ch0_mode == MODE_OFF) payload[0] = -1;
       if (ch1_mode == MODE_OFF) payload[SAMPLES] = -1;
       xTaskNotify(taskHandle, 0, eNoAction);  // notify Websocket server task
-#ifndef NOLCD
       ClearAndDrawDot(i);
-#endif
     }
-#ifndef NOLCD
     DrawGrid(disp_leng);  // right side grid   
-#endif
-    // Serial.println(millis()-st0);
-#ifdef NOLCD
-    digitalWrite(LED_BUILTIN, LED_OFF); // GPIO2 is used for touch CS
-#endif
-//    DrawGrid();
+      //    Serial.println(millis()-st0);
     DrawText();
   } else {
     DrawText();
@@ -596,9 +523,7 @@ void loop() {
   if (trig_mode == TRIG_ONE)
     Start = false;
   CheckSW();
-#ifdef EEPROM_START
   saveEEPROM();                         // save settings to EEPROM if necessary
-#endif
   if (wdds != dds_mode) {
     if (wdds) {
       dds_setup();
@@ -613,43 +538,47 @@ void draw_screen() {
 //  display.fillScreen(BGCOLOR);
   if (wfft != fft_mode) {
     fft_mode = wfft;
-#ifndef NOLCD
     display.fillScreen(BGCOLOR);
-#endif
   }
   if (fft_mode) {
     DrawText();
     plotFFT();
   } else {
-#ifndef NOLCD
     DrawGrid();
     ClearAndDrawGraph();
-#endif
     DrawText();
     if (ch0_mode == MODE_OFF) payload[0] = -1;
     if (ch1_mode == MODE_OFF) payload[SAMPLES] = -1;
   }
   xTaskNotify(taskHandle, 0, eNoAction);  // notify Websocket server task
   delay(10);    // wait Web task to send it (adhoc fix)
-//  display.display();
 }
 
 void measure_frequency(int ch) {
   int x;
-  byte y, yduty;
+  byte y;
   freqDuty(ch);
-#ifndef NOLCD
   if (ch == 0) {
-    yduty = 1;
+    y = 1;
+    display.setTextColor(TXTCOLOR, BGCOLOR);
+    display.setCursor(170, 1);
+    display.print("FRQ1");
+    display.setCursor(260, 1);
+    display.print("DTY1");
     display.setTextColor(CH1COLOR, BGCOLOR);
+    }
   } else {
-    yduty = YOFF + LCD_YMAX +10;
+    y = YOFF + LCD_YMAX + 10;
+    display.setTextColor(TXTCOLOR, BGCOLOR);
+    display.setCursor(170, y);
+    display.print("FRQ2");
+    display.setCursor(260, y);
+    display.print("DTY2");
     display.setTextColor(CH2COLOR, BGCOLOR);
+    }
   }
-  x = 200;
-  y = yduty;
-  TextBG(&y, x, 8);
   float freq = waveFreq[ch];
+  display.setCursor(200, y);
   if (freq < 999.5)
     display.print(freq);
   else if (freq < 999999.5)
@@ -660,11 +589,8 @@ void measure_frequency(int ch) {
   }
   display.print("Hz");
   if (fft_mode) return;
-  x = 290;
-  y = yduty;
-  TextBG(&y, x, 6);
+  display.setCursor(290, y);
   display.print(waveDuty[ch], 1);  display.print('%');
-#endif
 }
 
 void measure_voltage(int ch) {
@@ -833,7 +759,6 @@ float freqhref() {
   return (float) HREF[rate];
 }
 
-#ifdef EEPROM_START
 void saveEEPROM() {                   // Save the setting value in EEPROM after waiting a while after the button operation.
   int p = EEPROM_START;
   if (saveTimer > 0) {                // If the timer value is positive
@@ -871,7 +796,6 @@ void saveEEPROM() {                   // Save the setting value in EEPROM after 
     }
   }
 }
-#endif
 
 void set_default() {
   range0 = RANGE_MIN;
@@ -900,7 +824,6 @@ void set_default() {
 
 extern const byte wave_num;
 
-#ifdef EEPROM_START
 void loadEEPROM() { // Read setting values from EEPROM (abnormal values will be corrected to default)
   int p = EEPROM_START, error = 0;
 
@@ -955,4 +878,3 @@ void loadEEPROM() { // Read setting values from EEPROM (abnormal values will be 
   if (error > 0)
     set_default();
 }
-#endif
