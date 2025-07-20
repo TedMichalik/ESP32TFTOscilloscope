@@ -10,7 +10,10 @@
 #define TFT_DC    2  // Data Command control pin
 #define TFT_RST   4  // Reset pin (could connect to RST pin)
 
-#define GPIO_PIN 16 // PWM-out - should not assign GPIO #36 throough #39
+#define GPIO_PIN 33 // PWM-out - should not assign GPIO #36 throough #39
+
+#define RXD2 16     // Hardware Serial 2 pins
+#define TXD2 17
 
 const int LCD_WIDTH = 170;
 const int LCD_HEIGHT = 320;

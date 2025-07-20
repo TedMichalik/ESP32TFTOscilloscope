@@ -41,12 +41,11 @@ extern byte wave_id;
 
 const int ad_ch0 = ADC1_CHANNEL_6;  // Analog 34 pin for channel 0 ADC1_CHANNEL_6
 const int ad_ch1 = ADC1_CHANNEL_7;  // Analog 35 pin for channel 1 ADC1_CHANNEL_7
-const long VREF[] = {50, 99, 248, 495, 990}; // reference voltage 3.3V ->  82.5 :   1V/div range (40mV/dot)
-//const long VREF[] = {83, 165, 413, 825, 1650}; // reference voltage 3.3V ->  82.5 :   1V/div range (40mV/dot)
-                                        //                        -> 165 : 0.5V/div
-                                        //                        -> 413 : 0.2V/div
-                                        //                        -> 825 : 100mV/div
-                                        //                        -> 1650 : 50mV/div
+const long VREF[] = {50, 99, 248, 495, 990}; // reference voltage 3.3V ->  50dots : LCD (3.3V * 15dots/div / 1V/div)
+                                        //                        -> 99  : 0.5V/div
+                                        //                        -> 248 : 0.2V/div
+                                        //                        -> 495 : 100mV/div
+                                        //                        -> 990 : 50mV/div
 //const int MILLIVOL_per_dot[] = {100, 50, 20, 10, 5}; // mV/dot
 //const int ac_offset[] PROGMEM = {1792, -128, -1297, -1679, -1860}; // for OLED
 const int ac_offset[] PROGMEM = {3072, 512, -1043, -1552, -1804}; // for Web
@@ -101,8 +100,8 @@ volatile bool wfft, wdds;
 #define RIGHTPIN  13  // RIGHT
 #define UPPIN     14  // UP
 #define DOWNPIN   27  // DOWN
-#define CH0DCSW   33  // DC/AC switch ch0
-#define CH1DCSW   17  // DC/AC switch ch1
+#define CH0DCSW   36  // DC/AC switch ch0
+#define CH1DCSW   39  // DC/AC switch ch1
 
 #define BGCOLOR   TFT_BLACK
 #define GRIDCOLOR TFT_DARKGREY
@@ -126,6 +125,12 @@ volatile bool wfft, wdds;
 TaskHandle_t taskHandle;
 
 void setup(){
+#define DEBUG
+#ifdef DEBUG
+  Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
+  Serial2.printf("CORE1 = %d\n", xPortGetCoreID());
+#endif
+
   xTaskCreatePinnedToCore(setup1, "WebProcess", 4096, NULL, 1, &taskHandle, PRO_CPU_NUM); //Core 0でタスク開始
   pinMode(CH0DCSW, INPUT_PULLUP);   // CH1 DC/AC
   pinMode(CH1DCSW, INPUT_PULLUP);   // CH2 DC/AC
@@ -140,8 +145,6 @@ void setup(){
   uint16_t calData[5] = { 368, 3538, 256, 3459, 7 };
   display.fillScreen(BGCOLOR);
 
-//  Serial.begin(115200);
-//  Serial.printf("CORE1 = %d\n", xPortGetCoreID());
   EEPROM.begin(32);                     // set EEPROM size. Necessary for ESP32
   loadEEPROM();                         // read last settings from EEPROM
   wfft = fft_mode;
@@ -394,13 +397,13 @@ void scaleDataArray(byte ad_ch, int trig_point)
   }
   for (int i = 0; i < SAMPLES; i++) {
     *idata = adc_linearlize(*idata);
-    a = ((*idata + ch_off) * VREF[range] + 2048) >> 12;
+    a = ((*idata + ch_off) * VREF[range]) / 4095;
     if (a > LCD_YMAX) a = LCD_YMAX;
     else if (a < 0) a = 0;
     if (ch_mode == MODE_INV)
       a = LCD_YMAX - a;
     *pdata++ = (byte) a;
-    b = ((*idata++ + ch_off) * VREF[range] + 101) / 201;
+    b = ((*idata++ + ch_off) * VREF[range]) / 120;
     if (b > 4095) b = 4095;
     else if (b < 0) b = 0;
     if (ch_mode == MODE_INV)
@@ -570,6 +573,7 @@ void draw_screen() {
     display.fillScreen(BGCOLOR);
   }
   if (fft_mode) {
+    DrawGrid();
     DrawText();
     plotFFT();
   } else {
@@ -731,11 +735,11 @@ void plotFFT() {
   lastplot = data[clear];
   payload[0] = 0;
   for (int i = 1; i < FFT_N/2; i++) {
-    float db = log10(vReal[i]);
-    payload[i] = constrain((int)(1024.0 * (db - 1.6)), 0, 4095);
-    int dat = constrain((int)(50.0 * (db - 1.6)), 0, LCD_YMAX);
-    display.drawFastVLine(i * 2, y - lastplot[i], lastplot[i], BGCOLOR); // erase old
-    display.drawFastVLine(i * 2, y - dat, dat, CH1COLOR);
+    float mag = vReal[i];
+    payload[i] = constrain((int)(mag / 50.0), 0, 4095); // Normalize magnitude (/2048) & scale to web canvas (*4096/100)
+    int dat = constrain((int)(mag / 1706.7), 0, LCD_YMAX); // Normalize magnitude (/2048) & scale to LCD (*LCD_YMAX/100)
+    display.drawFastVLine(i, y - lastplot[i], lastplot[i], BGCOLOR); // erase old
+    display.drawFastVLine(i, y - dat, dat, CH1COLOR);
     newplot[i] = dat;
   }
   draw_scale();
@@ -743,34 +747,27 @@ void plotFFT() {
 
 void draw_scale() {
   int ylim = BOTTOM_LINE + 4;
-  float fhref, nyquist;
+  float fhref, nyquist, binfreqbase, binfreq;
   display.setTextColor(TXTCOLOR);
-  display.setCursor(0, ylim); display.print("0Hz"); 
   fhref = freqhref();
   nyquist = 5.0e6 / fhref; // Nyquist frequency
   long inyquist = nyquist;
   payload[FFT_N/2] = (short) (inyquist / 1000);
   payload[FFT_N/2+1] = (short) (inyquist % 1000);
-  if (nyquist > 999.0) {
-    nyquist = nyquist / 1000.0;
-    if (nyquist > 99.5) {
-      display.setCursor(116, ylim); display.print(nyquist/2,0);display.print('k');
-      display.setCursor(232, ylim); display.print(nyquist,0);
-    } else if (nyquist > 9.95) {
-      display.setCursor(122, ylim); display.print(nyquist/2,0);display.print('k');
-      display.setCursor(238, ylim); display.print(nyquist,0);
+  clear_bottom_text();
+  binfreqbase = DOTS_DIV * 1000000.0 / FFT_N / US_DIV[rate];
+  for (int i=0; i<FFT_N/2; i+=30) {
+    binfreq = i * binfreqbase;
+    if (binfreq < 1000.0) {
+      display.setCursor(XOFF + i, ylim); display.print(binfreq,0);
     } else {
-      display.setCursor(122, ylim); display.print(nyquist/2,1);display.print('k');
-      display.setCursor(232, ylim); display.print(nyquist,1);
+      binfreq = binfreq / 1000.0;
+      display.setCursor(XOFF + i, ylim); display.print(binfreq,1); display.print("k");
     }
-    display.print('k');
-  } else {
-    display.setCursor(116, ylim); display.print(nyquist/2,0);
-    display.setCursor(238, ylim); display.print(nyquist,0);
   }
-  for (int j = 10; j < 80; j += 10) {
-    display.setCursor(XOFF + FFT_N, YOFF + (j * DOTS_DIV / 10));
-    display.print(-j); display.print("dB");
+  for (int j = 0; j <= 100; j += 25) {
+    display.setCursor(XOFF + FFT_N/2, YOFF + (j * LCD_YMAX / 100));
+    display.print(100 - j); display.print("%");
   }
 }
 

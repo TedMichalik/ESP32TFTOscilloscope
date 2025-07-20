@@ -23,7 +23,9 @@ void handleRoot(void) {
 //  xTaskCreatePinnedToCore(index_html, "IndexProcess", 4096, NULL, 1, NULL, PRO_CPU_NUM); //Core 0でタスク開始
 
   if (server.method() == HTTP_POST) {
-    Serial.println(server.argName(0));
+#ifdef DEBUG
+    Serial2.println(server.argName(0));
+#endif
     handle_rate();
     handle_range1();
     handle_range2();
@@ -52,7 +54,9 @@ void handleRoot(void) {
 void handle_ch1_mode() {
   String val = server.arg("ch1_mode");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     if (val == "chon") {
       ch0_mode = MODE_ON;       // CH1 ON
     } else if (val == "chinv") {
@@ -67,7 +71,9 @@ void handle_ch1_mode() {
 void handle_ch2_mode() {
   String val = server.arg("ch2_mode");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     if (val == "chon") {
       ch1_mode = MODE_ON;       // CH2 ON
     } else if (val == "chinv") {
@@ -83,7 +89,9 @@ void handle_rate() {
   String val = server.arg("rate");
   if (val != NULL) {
     int nrate = rate;
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     if (val == "1") {
       wrate = 3;    // fast
       if (rate > RATE_MIN) nrate = rate - 1;
@@ -100,7 +108,9 @@ void handle_rate() {
 void handle_range1() {
   String val = server.arg("range1");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     if (val == "1") {
       updown_ch0range(3);  // range1 up
     } else if (val == "0") {
@@ -118,7 +128,9 @@ void handle_range1() {
 void handle_range2() {
   String val = server.arg("range2");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     if (val == "1") {
       updown_ch1range(3);  // range2 up
     } else if (val == "0") {
@@ -136,7 +148,9 @@ void handle_range2() {
 void handle_trigger_mode() {
   String val = server.arg("trigger_mode");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     if (val == "0") {
       trig_mode = 0;  // Auto
     } else if (val == "1") {
@@ -155,7 +169,9 @@ void handle_trigger_mode() {
 void handle_trig_ch() {
   String val = server.arg("trig_ch");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     if (val == "ch1") {
       trig_ch = ad_ch0;
     } else if (val == "ch2") {
@@ -168,7 +184,9 @@ void handle_trig_ch() {
 void handle_trig_edge() {
   String val = server.arg("trig_edge");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     if (val == "down") {
       trig_edge = TRIG_E_DN;  // trigger fall
     } else if (val == "up") {
@@ -181,7 +199,9 @@ void handle_trig_edge() {
 void handle_trig_level() {
   String val = server.arg("trig_lvl");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     trig_lv = val.toInt();
     set_trigger_ad();
     server.send(200, "text/html", "OK");  // response 200, send OK
@@ -191,11 +211,15 @@ void handle_trig_level() {
 void handle_run_hold() {
   String val = server.arg("run_hold");
   if (val == "run") {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     Start = true;
     server.send(200, "text/html", "OK");  // response 200, send OK
   } else if (val == "hold") {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     Start = false;
     server.send(200, "text/html", "OK");  // response 200, send OK
   }
@@ -203,7 +227,9 @@ void handle_run_hold() {
 
 void handle_ch_offset1() {
   if (server.hasArg("reset1")) {
-    Serial.println("reset1");
+#ifdef DEBUG
+    Serial2.println("reset1");
+#endif
     if (server.arg("reset1").equals("1")) {
       if (digitalRead(CH0DCSW) == LOW)    // DC/AC input
         ch0_off = ac_offset[range0];
@@ -214,7 +240,7 @@ void handle_ch_offset1() {
   } else if (server.hasArg("offset1")) {
     String val = server.arg("offset1");
     if (val != NULL) {
-//      Serial.println(val);
+//      Serial2.println(val);
       long offset = val.toInt();
       ch0_off = (4096 * offset)/VREF[range0];
       if (digitalRead(CH0DCSW) == LOW)    // DC/AC input
@@ -226,7 +252,9 @@ void handle_ch_offset1() {
 
 void handle_ch_offset2() {
   if (server.hasArg("reset2")) {
-    Serial.println("reset2");
+#ifdef DEBUG
+    Serial2.println("reset2");
+#endif
     if (server.arg("reset2").equals("2")) {
       if (digitalRead(CH1DCSW) == LOW)    // DC/AC input
         ch1_off = ac_offset[range1];
@@ -237,7 +265,7 @@ void handle_ch_offset2() {
   } else if (server.hasArg("offset2")) {
     String val = server.arg("offset2");
     if (val != NULL) {
-//      Serial.println(val);
+//      Serial2.println(val);
       long offset = val.toInt();
       ch1_off = (4096 * offset)/VREF[range1];
       if (digitalRead(CH1DCSW) == LOW)    // DC/AC input
@@ -250,7 +278,9 @@ void handle_ch_offset2() {
 void handle_wave_fft() {
   String val = server.arg("wavefft");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     if (val == "wave") {
       wfft = false;
     } else if (val == "fft") {
@@ -263,7 +293,9 @@ void handle_wave_fft() {
 void handle_pwm_onoff() {
   String val = server.arg("pwm_on");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     if (val == "on") {
       update_frq(0);
       pulse_start();
@@ -279,7 +311,9 @@ void handle_pwm_onoff() {
 void handle_dds_onoff() {
   String val = server.arg("dds_on");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     if (val == "on") {
       wdds = true;
     } else if (val == "off") {
@@ -292,7 +326,9 @@ void handle_dds_onoff() {
 void handle_wave_select() {
   String val = server.arg("wave_select");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     server.send(200, "text/html", "OK");  // response 200, send OK
     set_wave(val.toInt());
   }
@@ -301,7 +337,9 @@ void handle_wave_select() {
 void handle_dds_freq() {
   String val = server.arg("dfreq");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     server.send(200, "text/html", String(set_freq((float)val.toFloat()), 2)); // response 200, send OK
   }
 }
@@ -309,7 +347,9 @@ void handle_dds_freq() {
 void handle_pwm_duty() {
   String val = server.arg("duty");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     duty = constrain(round(val.toFloat() * 2.56), 0, 255);
     setduty();
     server.send(200, "text/html", String(duty*100.0/256.0, 1)); // response 200, send OK
@@ -319,7 +359,9 @@ void handle_pwm_duty() {
 void handle_pwm_freq() {
   String val = server.arg("wfreq");
   if (val != NULL) {
-    Serial.println(val);
+#ifdef DEBUG
+    Serial2.println(val);
+#endif
     set_pulse_frq(val.toFloat());
     server.send(200, "text/html", String(pulse_frq())); // response 200, send OK
   }
@@ -350,7 +392,7 @@ ws.onmessage = function(evt) {
   ctx.fillRect(0,0,groundW,groundH);
   var groundX0= 0; var groundY0= groundH;
   var pichX = 50;
-  var cnstH= groundH/%SCALEX%;
+  var cnstH= groundH/4096;
   var pichH = groundH/8;
   const fftsamples = 128;
   const displng = %DISPLNG%;
@@ -384,35 +426,35 @@ ws.onmessage = function(evt) {
   ctx.beginPath();
   ctx.strokeStyle = "rgb(0,255,0)";
   if (datas.length == (fftsamples + 6)) {
-    var base = groundY0-pichH;
+    var base = groundY0;
     for (var i = 1; i < fftsamples; i++){
       ctx.moveTo(groundX0+fftpich*i, base);
       ctx.lineTo(groundX0+fftpich*i, base-cnstH*datas[i]);
     }
     ctx.stroke();
     ctx.strokeStyle = "rgb(192,192,192)";
-    ctx.moveTo(0, base); ctx.lineTo(0, base+8);
-    ctx.moveTo(8*32, base); ctx.lineTo(8*32, base+8);
-    ctx.moveTo(8*64, base); ctx.lineTo(8*64, base+8);
+    ctx.moveTo(0, 0); ctx.lineTo(0, 8);
+    ctx.moveTo(8*32, 0); ctx.lineTo(8*32, 8);
+    ctx.moveTo(8*64, 0); ctx.lineTo(8*64, 8);
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.font = "12pt Arial";
     ctx.fillStyle = "rgb(192,192,192)";
-    for (var j = 10; j < 80; j += 10){
-      ctx.fillText(String(-j)+"dB", 555, 5 * j);
+    for (var j = 0; j <= 100; j += 25){
+      ctx.fillText(String(100-j)+"%", 510, 4 * j);
     }
     var nyquist = 1000 * datas[fftsamples] + datas[fftsamples+1];
     ctx.textBaseline = "top";
-    ctx.fillText("0Hz", 0, base + 10);
+    ctx.fillText("0Hz", 0, 12);
     ctx.textAlign = "center";
     if ((nyquist/2) < 1000)
-      ctx.fillText(String(nyquist/2)+"Hz", 8*32, base + 10);
+      ctx.fillText(String(nyquist/2)+"Hz", 8*32, 12);
     else
-      ctx.fillText(String(nyquist/2000)+"kHz", 8*32, base + 10);
+      ctx.fillText(String(nyquist/2000)+"kHz", 8*32, 12);
     if (nyquist < 1000)
-      ctx.fillText(String(nyquist)+"Hz", 8*64, base + 10);
+      ctx.fillText(String(nyquist)+"Hz", 8*64, 12);
     else
-      ctx.fillText(String(nyquist/1000)+"kHz", 8*64, base + 10);
+      ctx.fillText(String(nyquist/1000)+"kHz", 8*64, 12);
     var frequency = (10000 * datas[fftsamples+2] + datas[fftsamples+3]) / 100.0;
     document.getElementById("ch1_freq").textContent = String(frequency)+"Hz";
     var duty = (10000 * datas[fftsamples+4] + datas[fftsamples+5]) / 100.0;
@@ -810,8 +852,7 @@ Hz</label>
   html.replace("%DISPLNG%", String(DISPLNG));
   html.replace("%WIDTH%", String((SAMPLES * 50 / DOTS_DIV) + 1));
   html.replace("%HEIGHT%", String((LCD_YMAX * 50 / DOTS_DIV) + 1));
-  html.replace("%SCALEX%", String(165 * DOTS_DIV));
-
+  
   html.replace("%RATE%", Rates[rate]);
   html.replace("%REALDMA%", (rate > RATE_DMA)?"":((rate > RATE_MAG)?"DMA":"MAG"));
   html.replace("%RANGE1%", ch1acdc + Ranges[range0]);
@@ -855,8 +896,9 @@ void handleNotFound(void) {
 }
 
 void setup1(void * pvParameters) {
-  Serial.begin(115200);
-//  Serial.printf("CORE0 = %d\n", xPortGetCoreID());
+#ifdef DEBUG
+  Serial2.printf("CORE0 = %d\n", xPortGetCoreID());
+#endif
 #ifdef WIFI_ACCESS_POINT
   WiFi.disconnect(true);
   delay(1000);
@@ -871,13 +913,17 @@ void setup1(void * pvParameters) {
     delay(500);
   }
 #endif
+#ifdef DEBUG
   // print out the IP address of the ESP32
-  Serial.print("WiFi Connected. IP = "); Serial.println(WiFi.localIP());
-//  Serial.print("WiFi Connected. GW = "); Serial.println(WiFi.gatewayIP());
-//  Serial.print("WiFi Connected. DNS = "); Serial.println(WiFi.dnsIP());
+  Serial2.print("WiFi Connected. IP = "); Serial2.println(WiFi.localIP());
+//  Serial2.print("WiFi Connected. GW = "); Serial2.println(WiFi.gatewayIP());
+//  Serial2.print("WiFi Connected. DNS = "); Serial2.println(WiFi.dnsIP());
+#endif
 
   if (MDNS.begin("esp32oscillo")) {
-    Serial.println("MDNS responder started");
+#ifdef DEBUG
+    Serial2.println("MDNS responder started");
+#endif
   }
 
   server.on("/", handleRoot);
