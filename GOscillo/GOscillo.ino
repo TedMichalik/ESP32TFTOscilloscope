@@ -18,15 +18,9 @@
 Adafruit_ST7789 display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
 #include "driver/adc.h"
-<<<<<<< HEAD
 #include <EEPROM.h>
 #define EEPROM_START 0
-=======
->>>>>>> refs/remotes/origin/main
 #include "arduinoFFT.h"
-#include <EEPROM.h>
-
-#define EEPROM_START 0
 #define FFT_N 256
 double vReal[FFT_N]; // Real part array, actually float type
 double vImag[FFT_N]; // Imaginary part array
@@ -106,13 +100,8 @@ volatile bool wfft, wdds;
 #define RIGHTPIN  13  // RIGHT
 #define UPPIN     14  // UP
 #define DOWNPIN   27  // DOWN
-<<<<<<< HEAD
 #define CH0DCSW   36  // DC/AC switch ch0
 #define CH1DCSW   39  // DC/AC switch ch1
-=======
-#define CH0DCSW   33  // DC/AC switch ch0
-#define CH1DCSW   17  // DC/AC switch ch1
->>>>>>> refs/remotes/origin/main
 
 #define BGCOLOR   TFT_BLACK
 #define GRIDCOLOR TFT_DARKGREY
@@ -156,17 +145,8 @@ void setup(){
   uint16_t calData[5] = { 368, 3538, 256, 3459, 7 };
   display.fillScreen(BGCOLOR);
 
-<<<<<<< HEAD
   EEPROM.begin(32);                     // set EEPROM size. Necessary for ESP32
   loadEEPROM();                         // read last settings from EEPROM
-=======
-//  Serial.begin(115200);
-//  Serial.printf("CORE1 = %d\n", xPortGetCoreID());
-  EEPROM.begin(32);                     // set EEPROM size. Necessary for ESP32
-  loadEEPROM();                         // read last settings from EEPROM
-  info_mode = 3;  // ***Temporary*** until info_mode fixed.
-
->>>>>>> refs/remotes/origin/main
   wfft = fft_mode;
   wdds = dds_mode;
 
@@ -208,7 +188,6 @@ void DrawText() {
   if (info_mode & INFO_OFF)
     return;
   display.setTextSize(1); // Small
-<<<<<<< HEAD
   display.setCursor(170, 1);
   display.print("FRQ1");
   display.setCursor(260, 1);
@@ -268,25 +247,6 @@ void DrawText() {
   display.setCursor(140, BOTTOM_LINE);  // Trigger mode
   disp_trig_mode();
 
-=======
-  display.setCursor(MENU, YOFF);
-  display.print("info_mode = ");
-  display.print(info_mode);
-  display.setCursor(MENU, YOFF + 8);
-  display.print("rate = ");
-  display.print(rate);
-
-  if (ch0_mode == MODE_ON) {
-    dataAnalize(0);
-    if (info_mode & INFO_FRQ1)
-      measure_frequency(0);
-    if (info_mode & INFO_VOL1)
-      measure_voltage(0);
-  } else {
-    waveFreq[0] = 0;
-    waveDuty[0] = 0;
-  }
->>>>>>> refs/remotes/origin/main
   if (ch1_mode == MODE_ON) {
     dataAnalize(1);
     if (info_mode & INFO_FRQ2)
@@ -297,13 +257,9 @@ void DrawText() {
     waveFreq[1] = 0;
     waveDuty[1] = 0;
   }
-<<<<<<< HEAD
   display_freqduty(1);
 
   draw_trig_level(GRIDCOLOR); // draw trig_lv mark
-=======
-  DrawText_big();
->>>>>>> refs/remotes/origin/main
 }
 
 void draw_trig_level(int color) { // draw trig_lv mark
@@ -370,37 +326,18 @@ void ClearAndDrawGraph() {
   p6 = p5 + 1;
   p7 = data[sample+1];
   p8 = p7 + 1;
-<<<<<<< HEAD
 
   ch0_active = (ch0_mode == MODE_ON);
   ch1_active = (ch1_mode == MODE_ON);
 
-=======
->>>>>>> refs/remotes/origin/main
   for (int x=0; x<disp_leng; x++) {
     if (ch0_active) {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p1++, XOFF+x+1, YOFF+LCD_YMAX-*p2++, BGCOLOR);
-    }
-    if (ch0_mode == MODE_ON) {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p3++, XOFF+x+1, YOFF+LCD_YMAX-*p4++, CH1COLOR);
-      ch0_active = true;
-    } else {
-      if (ch0_active) {
-        display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p3++, XOFF+x+1, YOFF+LCD_YMAX-*p4++, BGCOLOR);
-        ch0_active = false;
-      }
     }
     if (ch1_active) {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p5++, XOFF+x+1, YOFF+LCD_YMAX-*p6++, BGCOLOR);
-    }
-    if (ch1_mode == MODE_ON) {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p7++, XOFF+x+1, YOFF+LCD_YMAX-*p8++, CH2COLOR);
-      ch1_active = true;
-    } else {
-      if (ch1_active) {
-        display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p7++, XOFF+x+1, YOFF+LCD_YMAX-*p8++, BGCOLOR);
-        ch1_active = false;
-      }
     }
   }
 }
@@ -521,7 +458,6 @@ void set_trigger_ad() {
   } else {
     trigger_ad = advalue(trig_lv, VREF[range1], ch1_mode, ch1_off);
   }
-  draw_trig_level(GRIDCOLOR); // draw trig_lv mark
 }
 
 void loop() {
@@ -569,8 +505,11 @@ void loop() {
       sample_i2s();
     } else if (rate == 6) { // channel 0 only 50us sampling
       sample_200us(50);
+//    } else if (rate >= 7 && rate <= 8) {  // dual channel 100us, 200us sampling
+//      sample_dual_us(HREF[rate] / 10);
     } else {                // dual channel .5ms, 1ms, 2ms, 5ms, 10ms, 20ms sampling
       sample_dual_us(US_DIV[rate] / DOTS_DIV);
+//      sample_dual_ms(HREF[rate] / 10);
     }
     draw_screen();
   } else if (Start) { // 40ms - 400ms sampling
@@ -579,6 +518,7 @@ void loop() {
     unsigned long r;
     int disp_leng;
     disp_leng = DISPLNG;
+//    unsigned long st0 = millis();
     unsigned long st = micros();
     for (int i=0; i<disp_leng; i ++) {
       r = r_[rate - RATE_ROLL];  // rate may be changed in loop
@@ -610,12 +550,6 @@ void loop() {
       ClearAndDrawDot(i);
     }
     DrawGrid(disp_leng);  // right side grid   
-<<<<<<< HEAD
-=======
-      //    Serial.println(millis()-st0);
-    DrawText();
-  } else {
->>>>>>> refs/remotes/origin/main
     DrawText();
   }
   if (trig_mode == TRIG_ONE)
@@ -643,12 +577,9 @@ void draw_screen() {
     DrawText();
     plotFFT();
   } else {
-<<<<<<< HEAD
     if ((ch0_active && (ch0_mode != MODE_ON)) || (ch1_active && (ch1_mode != MODE_ON))) {
       display.fillScreen(BGCOLOR); // Clear display if either channel turned off
     }
-=======
->>>>>>> refs/remotes/origin/main
     DrawGrid();
     ClearAndDrawGraph();
     DrawText();
@@ -661,33 +592,18 @@ void draw_screen() {
 
 void display_freqduty(int ch) {
   int x;
-<<<<<<< HEAD
   byte y, yduty;
-=======
-  byte y;
-  freqDuty(ch);
->>>>>>> refs/remotes/origin/main
   if (ch == 0) {
-    y = 1;
-    display.setTextColor(TXTCOLOR, BGCOLOR);
-    display.setCursor(170, 1);
-    display.print("FRQ1");
-    display.setCursor(260, 1);
-    display.print("DTY1");
+    yduty = 1;
     display.setTextColor(CH1COLOR, BGCOLOR);
-    }
   } else {
-    y = YOFF + LCD_YMAX + 10;
-    display.setTextColor(TXTCOLOR, BGCOLOR);
-    display.setCursor(170, y);
-    display.print("FRQ2");
-    display.setCursor(260, y);
-    display.print("DTY2");
+    yduty = YOFF + LCD_YMAX +10;
     display.setTextColor(CH2COLOR, BGCOLOR);
-    }
   }
+  x = 200;
+  y = yduty;
+  TextBG(&y, x, 8);
   float freq = waveFreq[ch];
-  display.setCursor(200, y);
   if (freq < 999.5)
     display.print(freq);
   else if (freq < 999999.5)
@@ -697,15 +613,10 @@ void display_freqduty(int ch) {
     display.print('k');
   }
   display.print("Hz");
-<<<<<<< HEAD
 //  if (fft_mode) return;
   x = 290;
   y = yduty;
   TextBG(&y, x, 6);
-=======
-  if (fft_mode) return;
-  display.setCursor(290, y);
->>>>>>> refs/remotes/origin/main
   display.print(waveDuty[ch], 1);  display.print('%');
 }
 
@@ -864,6 +775,7 @@ float freqhref() {
   return (float) HREF[rate];
 }
 
+#ifdef EEPROM_START
 void saveEEPROM() {                   // Save the setting value in EEPROM after waiting a while after the button operation.
   int p = EEPROM_START;
   if (saveTimer > 0) {                // If the timer value is positive
@@ -901,6 +813,7 @@ void saveEEPROM() {                   // Save the setting value in EEPROM after 
     }
   }
 }
+#endif
 
 void set_default() {
   range0 = RANGE_MIN;
@@ -929,6 +842,7 @@ void set_default() {
 
 extern const byte wave_num;
 
+#ifdef EEPROM_START
 void loadEEPROM() { // Read setting values from EEPROM (abnormal values will be corrected to default)
   int p = EEPROM_START, error = 0;
 
@@ -983,3 +897,4 @@ void loadEEPROM() { // Read setting values from EEPROM (abnormal values will be 
   if (error > 0)
     set_default();
 }
+#endif

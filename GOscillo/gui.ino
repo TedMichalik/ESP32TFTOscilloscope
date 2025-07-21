@@ -127,19 +127,12 @@ void DrawText_big() {
   char str[5];
   byte y;
 
-  if (info_mode & INFO_OFF) {
+  if (!(info_mode & INFO_OFF)) {
+    display.setTextSize(1);
+    y = BOTTOM_LINE;
+  } else {
     return;
   }
-<<<<<<< HEAD
-=======
-  display.setTextSize(1);
-  disp_ch0(1, 1);         // CH1
-  display_ac_inv(1, CH0DCSW, ch0_mode);
-  display.setCursor(30, 1);   // CH1 range
-  disp_ch0_range();
-  display.setCursor(60, 1);  // Rate
-  disp_sweep_rate();
->>>>>>> refs/remotes/origin/main
   if (fft_mode)
     return;
   display.setCursor(100, 1);  // Position Offset
@@ -156,28 +149,6 @@ void DrawText_big() {
     display.setTextColor(OFFCOLOR, BGCOLOR);
     display.print("VPOS");
   }
-<<<<<<< HEAD
-=======
-  display.setCursor(140, 1);  // Function
-  set_menu_color(SEL_FUNC);
-  if (Start == false) {
-    display.setTextColor(REDCOLOR, BGCOLOR);
-    display.print("HOLD");
-  } else {
-    display.print("RUN");
-  }
-  y = BOTTOM_LINE;
-  disp_ch1(1, y);         // CH2
-  display_ac_inv(y, CH1DCSW, ch1_mode);
-  display.setCursor(30, y);   // CH2 range
-  disp_ch1_range();
-  set_pos_color(60, y, TXTCOLOR); // Trigger souce
-  disp_trig_source(); 
-  display.setCursor(100, y);  // Trigger edge
-  disp_trig_edge();
-  display.setCursor(140, y);  // Trigger mode
-  disp_trig_mode();
->>>>>>> refs/remotes/origin/main
 
   if (item >= SEL_DISP) {
 //    display.print("FREQ VOLT  LARG SMAL OFF  ");
