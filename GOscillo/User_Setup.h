@@ -12,7 +12,7 @@
 
 #define GPIO_PIN 33 // PWM-out - should not assign GPIO #36 throough #39
 
-#define RXD2 16     // Hardware Serial 2 pins
+#define RXD2 16     // Hardware Serial 2 pins - Not currently used
 #define TXD2 17
 
 const int LCD_WIDTH = 170;

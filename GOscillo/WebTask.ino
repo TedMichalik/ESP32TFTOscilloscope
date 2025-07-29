@@ -24,7 +24,7 @@ void handleRoot(void) {
 
   if (server.method() == HTTP_POST) {
 #ifdef DEBUG
-    Serial2.println(server.argName(0));
+    Serial.println(server.argName(0));
 #endif
     handle_rate();
     handle_range1();
@@ -55,7 +55,7 @@ void handle_ch1_mode() {
   String val = server.arg("ch1_mode");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     if (val == "chon") {
       ch0_mode = MODE_ON;       // CH1 ON
@@ -72,7 +72,7 @@ void handle_ch2_mode() {
   String val = server.arg("ch2_mode");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     if (val == "chon") {
       ch1_mode = MODE_ON;       // CH2 ON
@@ -90,7 +90,7 @@ void handle_rate() {
   if (val != NULL) {
     int nrate = rate;
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     if (val == "1") {
       wrate = 3;    // fast
@@ -109,7 +109,7 @@ void handle_range1() {
   String val = server.arg("range1");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     if (val == "1") {
       updown_ch0range(3);  // range1 up
@@ -129,7 +129,7 @@ void handle_range2() {
   String val = server.arg("range2");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     if (val == "1") {
       updown_ch1range(3);  // range2 up
@@ -149,7 +149,7 @@ void handle_trigger_mode() {
   String val = server.arg("trigger_mode");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     if (val == "0") {
       trig_mode = 0;  // Auto
@@ -170,7 +170,7 @@ void handle_trig_ch() {
   String val = server.arg("trig_ch");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     if (val == "ch1") {
       trig_ch = ad_ch0;
@@ -185,7 +185,7 @@ void handle_trig_edge() {
   String val = server.arg("trig_edge");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     if (val == "down") {
       trig_edge = TRIG_E_DN;  // trigger fall
@@ -200,7 +200,7 @@ void handle_trig_level() {
   String val = server.arg("trig_lvl");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     trig_lv = val.toInt();
     set_trigger_ad();
@@ -212,13 +212,13 @@ void handle_run_hold() {
   String val = server.arg("run_hold");
   if (val == "run") {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     Start = true;
     server.send(200, "text/html", "OK");  // response 200, send OK
   } else if (val == "hold") {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     Start = false;
     server.send(200, "text/html", "OK");  // response 200, send OK
@@ -228,7 +228,7 @@ void handle_run_hold() {
 void handle_ch_offset1() {
   if (server.hasArg("reset1")) {
 #ifdef DEBUG
-    Serial2.println("reset1");
+    Serial.println("reset1");
 #endif
     if (server.arg("reset1").equals("1")) {
       if (digitalRead(CH0DCSW) == LOW)    // DC/AC input
@@ -240,7 +240,7 @@ void handle_ch_offset1() {
   } else if (server.hasArg("offset1")) {
     String val = server.arg("offset1");
     if (val != NULL) {
-//      Serial2.println(val);
+//      Serial.println(val);
       long offset = val.toInt();
       ch0_off = (4096 * offset)/VREF[range0];
       if (digitalRead(CH0DCSW) == LOW)    // DC/AC input
@@ -253,7 +253,7 @@ void handle_ch_offset1() {
 void handle_ch_offset2() {
   if (server.hasArg("reset2")) {
 #ifdef DEBUG
-    Serial2.println("reset2");
+    Serial.println("reset2");
 #endif
     if (server.arg("reset2").equals("2")) {
       if (digitalRead(CH1DCSW) == LOW)    // DC/AC input
@@ -265,7 +265,7 @@ void handle_ch_offset2() {
   } else if (server.hasArg("offset2")) {
     String val = server.arg("offset2");
     if (val != NULL) {
-//      Serial2.println(val);
+//      Serial.println(val);
       long offset = val.toInt();
       ch1_off = (4096 * offset)/VREF[range1];
       if (digitalRead(CH1DCSW) == LOW)    // DC/AC input
@@ -279,7 +279,7 @@ void handle_wave_fft() {
   String val = server.arg("wavefft");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     if (val == "wave") {
       wfft = false;
@@ -294,7 +294,7 @@ void handle_pwm_onoff() {
   String val = server.arg("pwm_on");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     if (val == "on") {
       update_frq(0);
@@ -312,7 +312,7 @@ void handle_dds_onoff() {
   String val = server.arg("dds_on");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     if (val == "on") {
       wdds = true;
@@ -327,7 +327,7 @@ void handle_wave_select() {
   String val = server.arg("wave_select");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     server.send(200, "text/html", "OK");  // response 200, send OK
     set_wave(val.toInt());
@@ -338,7 +338,7 @@ void handle_dds_freq() {
   String val = server.arg("dfreq");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     server.send(200, "text/html", String(set_freq((float)val.toFloat()), 2)); // response 200, send OK
   }
@@ -348,7 +348,7 @@ void handle_pwm_duty() {
   String val = server.arg("duty");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     duty = constrain(round(val.toFloat() * 2.56), 0, 255);
     setduty();
@@ -360,7 +360,7 @@ void handle_pwm_freq() {
   String val = server.arg("wfreq");
   if (val != NULL) {
 #ifdef DEBUG
-    Serial2.println(val);
+    Serial.println(val);
 #endif
     set_pulse_frq(val.toFloat());
     server.send(200, "text/html", String(pulse_frq())); // response 200, send OK
@@ -897,7 +897,7 @@ void handleNotFound(void) {
 
 void setup1(void * pvParameters) {
 #ifdef DEBUG
-  Serial2.printf("CORE0 = %d\n", xPortGetCoreID());
+  Serial.printf("CORE0 = %d\n", xPortGetCoreID());
 #endif
 #ifdef WIFI_ACCESS_POINT
   WiFi.disconnect(true);
@@ -915,14 +915,14 @@ void setup1(void * pvParameters) {
 #endif
 #ifdef DEBUG
   // print out the IP address of the ESP32
-  Serial2.print("WiFi Connected. IP = "); Serial2.println(WiFi.localIP());
-//  Serial2.print("WiFi Connected. GW = "); Serial2.println(WiFi.gatewayIP());
-//  Serial2.print("WiFi Connected. DNS = "); Serial2.println(WiFi.dnsIP());
+  Serial.print("WiFi Connected. IP = "); Serial.println(WiFi.localIP());
+//  Serial.print("WiFi Connected. GW = "); Serial.println(WiFi.gatewayIP());
+//  Serial.print("WiFi Connected. DNS = "); Serial.println(WiFi.dnsIP());
 #endif
 
   if (MDNS.begin("esp32oscillo")) {
 #ifdef DEBUG
-    Serial2.println("MDNS responder started");
+    Serial.println("MDNS responder started");
 #endif
   }
 

@@ -127,8 +127,10 @@ TaskHandle_t taskHandle;
 void setup(){
 #define DEBUG
 #ifdef DEBUG
-  Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
-  Serial2.printf("CORE1 = %d\n", xPortGetCoreID());
+  Serial.begin(115200);
+  delay(1000); // Give serial port some time to initialize.
+  Serial.println("ESP32 Oscilloscope");
+  Serial.printf("CORE1 = %d\n", xPortGetCoreID());
 #endif
 
   xTaskCreatePinnedToCore(setup1, "WebProcess", 4096, NULL, 1, &taskHandle, PRO_CPU_NUM); //Core 0でタスク開始
